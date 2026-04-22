@@ -1,12 +1,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/krzysztofgb/jfmt"
+	flag "github.com/spf13/pflag"
 )
 
 func applyTemplate(name string, opts *jfmt.Options) bool {
@@ -49,16 +49,11 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	flags := flag.NewFlagSet("jfmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 
-	template := flags.String("template", "twospace", "indent template: fourspace, threespace, twospace, onetab, compact")
-	flags.StringVar(template, "t", "twospace", "shorthand for -template")
-	indent := flags.String("indent", "", "custom indent string (overrides -template)")
-	flags.StringVar(indent, "i", "", "shorthand for -indent")
-	compact := flags.Bool("compact", false, "compact output (overrides -template and -indent)")
-	flags.BoolVar(compact, "c", false, "shorthand for -compact")
-	specStr := flags.String("spec", "rfc8259", "json spec: rfc8259, rfc7159, rfc4627, ecma404, skip")
-	flags.StringVar(specStr, "s", "rfc8259", "shorthand for -spec")
-	validateOnly := flags.Bool("validate", false, "validate only, no output")
-	flags.BoolVar(validateOnly, "v", false, "shorthand for -validate")
+	template := flags.StringP("template", "t", "twospace", "indent template: fourspace, threespace, twospace, onetab, compact")
+	indent := flags.StringP("indent", "i", "", "custom indent string (overrides --template)")
+	compact := flags.BoolP("compact", "c", false, "compact output (overrides --template and --indent)")
+	specStr := flags.StringP("spec", "s", "rfc8259", "json spec: rfc8259, rfc7159, rfc4627, ecma404, skip")
+	validateOnly := flags.BoolP("validate", "v", false, "validate only, no output")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {

@@ -27,20 +27,21 @@ unquoted and numeric object keys, incorrect literals (True/False/Null),
 line and block comments, trailing commas, and unescaped control characters.
 
 ```
--template, -t   fourspace | threespace | twospace | onetab | compact (default: twospace)
--indent, -i     custom indent string (overrides -template)
--compact, -c    compact output (overrides -template and -indent)
--spec, -s       rfc8259 | rfc7159 | rfc4627 | ecma404 | skip (default: rfc8259)
--validate, -v   validate only, no output
--no-fix         disable automatic JSON repair
+--template, -t   fourspace | threespace | twospace | onetab | compact (default: twospace)
+--indent, -i     custom indent string (overrides --template)
+--compact, -c    compact output (overrides --template and --indent)
+--spec, -s       rfc8259 | rfc7159 | rfc4627 | ecma404 | skip (default: rfc8259)
+--validate, -v   validate only, no output
+--no-fix         disable automatic JSON repair
 ```
 
 ```bash
 jfmt data.json
 cat data.json | jfmt -t fourspace
-cat data.json | jfmt -compact
-jfmt -s rfc4627 -validate data.json
-jfmt -no-fix data.json
+cat data.json | jfmt --compact
+jfmt -s rfc4627 --validate data.json
+jfmt --no-fix data.json
+jfmt -cvs rfc4627 data.json
 ```
 
 Copy formatted output to the clipboard:
