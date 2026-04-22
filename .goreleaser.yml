@@ -35,7 +35,7 @@ homebrew_casks:
 changelog:
   use: github
   abbrev: -1
-  format: "{{.Message}}"
+  format: "{{.Message}} (@{{.AuthorUsername}})"
   sort: asc
   groups:
     - title: New Features
