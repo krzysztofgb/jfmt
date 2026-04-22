@@ -237,14 +237,14 @@ func TestValidate_specSkip(t *testing.T) {
 }
 
 func FuzzFormat(f *testing.F) {
-	f.Add([]byte(`{"key":"value"}`))
-	f.Add([]byte(`[1,2,3]`))
-	f.Add([]byte(`null`))
+	f.Add([]byte(`{"key":"value"}`), false)
+	f.Add([]byte(`[1,2,3]`), false)
+	f.Add([]byte(`null`), true)
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(t *testing.T, data []byte, sortKeys bool) {
 		t.Helper()
 
-		out, err := jfmt.Format(data, jfmt.Options{Indent: "  ", NoFix: true})
+		out, err := jfmt.Format(data, jfmt.Options{Indent: "  ", NoFix: true, SortKeys: sortKeys})
 		if err != nil {
 			return
 		}
@@ -252,5 +252,16 @@ func FuzzFormat(f *testing.F) {
 		if !jfmt.Validate(out, jfmt.RFC8259) {
 			t.Errorf("Format produced invalid JSON for input %q", data)
 		}
+	})
+}
+
+func FuzzFix(f *testing.F) {
+	f.Add([]byte(`{"key":"value"}`))
+	f.Add([]byte(`{key: 'value', active: True, tags: ['a', 'b',]}`))
+	f.Add([]byte(`{"a": 1, // comment` + "\n" + `"b": 2}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		t.Helper()
+		_ = jfmt.Fix(data)
 	})
 }
