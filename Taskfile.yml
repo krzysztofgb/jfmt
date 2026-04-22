@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - go build -o jfmt ./cmd/jfmt
+
+  lint:
+    cmds:
+      - golangci-lint run
+
+  lint-fix:
+    cmds:
+      - golangci-lint run --fix
+
+  test:
+    cmds:
+      - go test -v -race -shuffle=on -coverprofile=coverage.out ./...
+
+  test-cov:
+    deps:
+      - test
+    cmds:
+      - go tool cover -html=coverage.out
+
+  bench:
+    cmds:
+      - go test -v -run=^$ -timeout 2h -bench=. -benchmem -count 10 ./...
+
+  fuzz:
+    cmds:
+      - go test -v -fuzz=FuzzFormat -fuzztime=30s ./...
