@@ -20,6 +20,20 @@ archives:
         formats:
           - zip
 
+brews:
+  - name: jfmt
+    repository:
+      owner: krzysztofgb
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/krzysztofgb/jfmt
+    description: A JSON formatter and validator for the command line.
+    license: MIT
+    install: |
+      bin.install "jfmt"
+    test: |
+      system "#{bin}/jfmt", "--help"
+
 changelog:
   use: github
   sort: asc
