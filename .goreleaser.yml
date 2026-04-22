@@ -28,7 +28,7 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/krzysztofgb/jfmt
     description: A JSON formatter and validator for the command line.
-    license: MIT
+    license: Unlicense
     install: |
       bin.install "jfmt"
     test: |
