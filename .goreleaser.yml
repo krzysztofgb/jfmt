@@ -56,8 +56,4 @@ changelog:
     - title: Other
       order: 999
   filters:
-    exclude:
-      - "^test:"
-      - "^chore:"
-      - "^ci:"
-      - "^build:"
+    exclude: []
