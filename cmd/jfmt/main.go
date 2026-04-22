@@ -49,7 +49,7 @@ func parseSpec(s string) (jfmt.Spec, bool) {
 	return 0, false
 }
 
-func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
+func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, useColor bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
 	if validateOnly {
 		if err := jfmt.ValidateError(src, spec); err != nil {
 			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
@@ -89,12 +89,16 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 		}
 	}
 
+	if useColor {
+		out = colorize(out)
+	}
+
 	fmt.Fprintln(stdout, string(out))
 
 	return 0
 }
 
-func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, stdout io.Writer, stderr io.Writer) int {
+func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, useColor bool, stdout io.Writer, stderr io.Writer) int {
 	compact := jfmt.Options{
 		Compact: true,
 		Spec:    opts.Spec,
@@ -127,6 +131,10 @@ func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, 
 			code = 1
 
 			continue
+		}
+
+		if useColor {
+			out = colorize(out)
 		}
 
 		fmt.Fprintln(stdout, string(out))
@@ -199,6 +207,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	sortKeys := flags.Bool("sort-keys", false, "sort object keys alphabetically")
 	verbose := flags.Bool("verbose", false, "print repair diagnostics to stderr")
 	jsonLines := flags.BoolP("jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
+	color := flags.Bool("color", false, "colorize output (default: auto)")
+	noColor := flags.Bool("no-color", false, "disable colorized output")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {
@@ -236,6 +246,9 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		}
 	}
 
+	outFile, _ := stdout.(*os.File)
+	useColor := !*noColor && (*color || (outFile != nil && isTerminal(outFile)))
+
 	files := flags.Args()
 
 	if len(files) == 0 {
@@ -253,10 +266,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		}
 
 		if *jsonLines {
-			return processJSONLines(src, "<stdin>", opts, *verbose, stdout, stderr)
+			return processJSONLines(src, "<stdin>", opts, *verbose, useColor, stdout, stderr)
 		}
 
-		return processInput(src, "<stdin>", opts, *validateOnly, *verbose, spec, stdout, stderr)
+		return processInput(src, "<stdin>", opts, *validateOnly, *verbose, useColor, spec, stdout, stderr)
 	}
 
 	code := 0
@@ -275,10 +288,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 				code = 1
 			}
 		} else if *jsonLines {
-			if processJSONLines(src, path, opts, *verbose, stdout, stderr) != 0 {
+			if processJSONLines(src, path, opts, *verbose, useColor, stdout, stderr) != 0 {
 				code = 1
 			}
-		} else if processInput(src, path, opts, *validateOnly, *verbose, spec, stdout, stderr) != 0 {
+		} else if processInput(src, path, opts, *validateOnly, *verbose, useColor, spec, stdout, stderr) != 0 {
 			code = 1
 		}
 	}
