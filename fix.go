@@ -360,7 +360,7 @@ func (f *fixer) matchLiteral() (string, int) {
 			continue
 		}
 
-		if !strings.EqualFold(string(f.src[f.pos:end]), lit) {
+		if !bytes.EqualFold(f.src[f.pos:end], []byte(lit)) {
 			continue
 		}
 
