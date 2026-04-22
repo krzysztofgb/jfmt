@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/krzysztofgb/jfmt"
 	flag "github.com/spf13/pflag"
@@ -70,6 +71,46 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 	return 0
 }
 
+func writeInPlace(src []byte, path string, opts jfmt.Options, stderr io.Writer) int {
+	out, err := jfmt.Format(src, opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
+
+		return 1
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".jfmt-*")
+	if err != nil {
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
+
+		return 1
+	}
+
+	if _, err = tmp.Write(out); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
+
+		return 1
+	}
+
+	if err = tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
+
+		return 1
+	}
+
+	if err = os.Rename(tmp.Name(), path); err != nil {
+		os.Remove(tmp.Name())
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
+
+		return 1
+	}
+
+	return 0
+}
+
 func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
 	flags := flag.NewFlagSet("jfmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -80,6 +121,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	compact := flags.BoolP("compact", "c", false, "compact output (overrides --template and --indent)")
 	specStr := flags.StringP("spec", "s", "rfc8259", "json spec: rfc8259, rfc7159, rfc4627, ecma404, skip")
 	validateOnly := flags.BoolP("validate", "v", false, "validate only, no output")
+	write := flags.BoolP("write", "w", false, "write result back to source file")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {
@@ -119,6 +161,12 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	files := flags.Args()
 
 	if len(files) == 0 {
+		if *write {
+			fmt.Fprintln(stderr, "jfmt: --write requires at least one file argument")
+
+			return 1
+		}
+
 		src, err := io.ReadAll(stdin)
 		if err != nil {
 			fmt.Fprintf(stderr, "jfmt: read stdin: %v\n", err)
@@ -140,7 +188,11 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 			continue
 		}
 
-		if processInput(src, path, opts, *validateOnly, spec, stdout, stderr) != 0 {
+		if *write {
+			if writeInPlace(src, path, opts, stderr) != 0 {
+				code = 1
+			}
+		} else if processInput(src, path, opts, *validateOnly, spec, stdout, stderr) != 0 {
 			code = 1
 		}
 	}
