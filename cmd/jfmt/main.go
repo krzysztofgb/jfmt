@@ -9,6 +9,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var version = "dev"
+
 func applyTemplate(name string, opts *jfmt.Options) bool {
 	switch name {
 	case "fourspace":
@@ -49,6 +51,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	flags := flag.NewFlagSet("jfmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 
+	showVersion := flags.BoolP("version", "V", false, "print version and exit")
 	template := flags.StringP("template", "t", "twospace", "indent template: fourspace, threespace, twospace, onetab, compact")
 	indent := flags.StringP("indent", "i", "", "custom indent string (overrides --template)")
 	compact := flags.BoolP("compact", "c", false, "compact output (overrides --template and --indent)")
@@ -58,6 +61,11 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 
 	if err := flags.Parse(args); err != nil {
 		return 1
+	}
+
+	if *showVersion {
+		fmt.Fprintf(stdout, "jfmt %s\n", version)
+		return 0
 	}
 
 	spec, ok := parseSpec(*specStr)
