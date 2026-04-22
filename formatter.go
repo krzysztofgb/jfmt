@@ -1,0 +1,89 @@
+package jfmt
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
+
+// Spec identifies the JSON specification to validate against.
+type Spec int
+
+const (
+	RFC8259  Spec = iota // RFC 8259, current standard (default)
+	RFC7159              // RFC 7159
+	RFC4627              // RFC 4627: root value must be an object or array
+	ECMA404              // ECMA-404
+	SpecSkip             // skip validation, format only
+)
+
+// Options controls formatting and validation behavior.
+// Fix is enabled by default; set NoFix to disable it.
+type Options struct {
+	Indent  string // indent string; ignored when Compact is true
+	Compact bool   // produce compact JSON; overrides Indent
+	Spec    Spec   // JSON specification to validate against
+	NoFix   bool   // disable automatic JSON repair
+}
+
+// Format repairs (unless opts.NoFix is set), validates, and formats src.
+// Returns an error if src is not valid JSON after any repairs.
+func Format(src []byte, opts Options) ([]byte, error) {
+	if !opts.NoFix {
+		src = Fix(src)
+	}
+
+	if opts.Spec != SpecSkip {
+		if err := checkSpec(src, opts.Spec); err != nil {
+			return nil, err
+		}
+	}
+
+	if opts.Compact {
+		var buf bytes.Buffer
+
+		if err := json.Compact(&buf, src); err != nil {
+			return nil, fmt.Errorf("compact: %w", err)
+		}
+
+		return buf.Bytes(), nil
+	}
+
+	indent := opts.Indent
+	if indent == "" {
+		indent = "  "
+	}
+
+	var buf bytes.Buffer
+
+	if err := json.Indent(&buf, src, "", indent); err != nil {
+		return nil, fmt.Errorf("indent: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// Validate reports whether src is valid JSON under spec.
+// SpecSkip always returns true.
+func Validate(src []byte, spec Spec) bool {
+	if spec == SpecSkip {
+		return true
+	}
+
+	return checkSpec(src, spec) == nil
+}
+
+func checkSpec(src []byte, spec Spec) error {
+	if !json.Valid(src) {
+		return fmt.Errorf("invalid JSON")
+	}
+
+	if spec == RFC4627 {
+		trimmed := bytes.TrimSpace(src)
+		if len(trimmed) == 0 || (trimmed[0] != '{' && trimmed[0] != '[') {
+			return fmt.Errorf("RFC 4627: root value must be an object or array")
+		}
+	}
+
+	return nil
+}
