@@ -50,10 +50,26 @@ go get github.com/krzysztofgb/jfmt
 ```
 
 ```go
+// Format (fix is on by default)
 out, err := jfmt.Format(src, jfmt.Options{Indent: "  "})
 out, err := jfmt.Format(src, jfmt.Options{Compact: true})
-ok := jfmt.Validate(src)
+out, err := jfmt.Format(src, jfmt.Options{Spec: jfmt.RFC4627})
+
+// Validate against a spec
+ok := jfmt.Validate(src, jfmt.RFC8259)
+ok := jfmt.Validate(src, jfmt.RFC4627) // root must be object or array
+
+// Repair without formatting
+fixed := jfmt.Fix(src)
 ```
+
+Runnable examples are in [examples/](examples/).
+
+| example | demonstrates |
+|---------|-------------|
+| [examples/format](examples/format/main.go) | indent templates, compact output |
+| [examples/validate](examples/validate/main.go) | spec validation across RFC 8259 and RFC 4627 |
+| [examples/repair](examples/repair/main.go) | Fix and auto-repair in Format |
 
 ## Benchmarks
 
