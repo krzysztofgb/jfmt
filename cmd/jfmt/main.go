@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -93,6 +94,47 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 	return 0
 }
 
+func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, stdout io.Writer, stderr io.Writer) int {
+	compact := jfmt.Options{
+		Compact: true,
+		Spec:    opts.Spec,
+		NoFix:   opts.NoFix,
+	}
+
+	code := 0
+
+	for i, line := range bytes.Split(src, []byte("\n")) {
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
+		lineName := fmt.Sprintf("%s:%d", name, i+1)
+
+		if verbose && !compact.NoFix {
+			fixed, report := jfmt.FixWithReport(line)
+			if s := report.String(); s != "" {
+				fmt.Fprintf(stderr, "jfmt: %s: %s\n", lineName, s)
+			}
+
+			line = fixed
+			compact.NoFix = true
+		}
+
+		out, err := jfmt.Format(line, compact)
+		if err != nil {
+			fmt.Fprintf(stderr, "jfmt: %s: %v\n", lineName, err)
+			code = 1
+
+			continue
+		}
+
+		fmt.Fprintln(stdout, string(out))
+	}
+
+	return code
+}
+
 func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stderr io.Writer) int {
 	if verbose && !opts.NoFix {
 		fixed, report := jfmt.FixWithReport(src)
@@ -156,6 +198,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	write := flags.BoolP("write", "w", false, "write result back to source file")
 	sortKeys := flags.Bool("sort-keys", false, "sort object keys alphabetically")
 	verbose := flags.Bool("verbose", false, "print repair diagnostics to stderr")
+	jsonLines := flags.BoolP("jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {
@@ -209,6 +252,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 			return 1
 		}
 
+		if *jsonLines {
+			return processJSONLines(src, "<stdin>", opts, *verbose, stdout, stderr)
+		}
+
 		return processInput(src, "<stdin>", opts, *validateOnly, *verbose, spec, stdout, stderr)
 	}
 
@@ -225,6 +272,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 
 		if *write {
 			if writeInPlace(src, path, opts, *verbose, stderr) != 0 {
+				code = 1
+			}
+		} else if *jsonLines {
+			if processJSONLines(src, path, opts, *verbose, stdout, stderr) != 0 {
 				code = 1
 			}
 		} else if processInput(src, path, opts, *validateOnly, *verbose, spec, stdout, stderr) != 0 {
