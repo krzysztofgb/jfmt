@@ -22,7 +22,7 @@ archives:
         formats:
           - zip
 
-brews:
+homebrew_casks:
   - name: jfmt
     repository:
       owner: krzysztofgb
