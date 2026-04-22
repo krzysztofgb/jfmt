@@ -43,6 +43,20 @@ jfmt -s rfc4627 -validate data.json
 jfmt -no-fix data.json
 ```
 
+Copy formatted output to the clipboard:
+
+```bash
+# macOS
+jfmt data.json | pbcopy
+
+# Linux
+jfmt data.json | xclip -selection clipboard
+jfmt data.json | xsel --clipboard --input
+
+# Windows
+jfmt data.json | clip
+```
+
 ## Library
 
 ```bash
