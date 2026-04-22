@@ -48,7 +48,7 @@ func parseSpec(s string) (jfmt.Spec, bool) {
 	return 0, false
 }
 
-func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
+func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
 	if validateOnly {
 		if err := jfmt.ValidateError(src, spec); err != nil {
 			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
@@ -59,11 +59,33 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 		return 0
 	}
 
-	out, err := jfmt.Format(src, opts)
-	if err != nil {
-		fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
+	var out []byte
 
-		return 1
+	if verbose && !opts.NoFix {
+		fixed, report := jfmt.FixWithReport(src)
+		if s := report.String(); s != "" {
+			fmt.Fprintf(stderr, "jfmt: %s: %s\n", name, s)
+		}
+
+		opts.NoFix = true
+
+		var err error
+
+		out, err = jfmt.Format(fixed, opts)
+		if err != nil {
+			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
+
+			return 1
+		}
+	} else {
+		var err error
+
+		out, err = jfmt.Format(src, opts)
+		if err != nil {
+			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
+
+			return 1
+		}
 	}
 
 	fmt.Fprintln(stdout, string(out))
@@ -71,7 +93,17 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 	return 0
 }
 
-func writeInPlace(src []byte, path string, opts jfmt.Options, stderr io.Writer) int {
+func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stderr io.Writer) int {
+	if verbose && !opts.NoFix {
+		fixed, report := jfmt.FixWithReport(src)
+		if s := report.String(); s != "" {
+			fmt.Fprintf(stderr, "jfmt: %s: %s\n", path, s)
+		}
+
+		src = fixed
+		opts.NoFix = true
+	}
+
 	out, err := jfmt.Format(src, opts)
 	if err != nil {
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
@@ -123,6 +155,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	validateOnly := flags.BoolP("validate", "v", false, "validate only, no output")
 	write := flags.BoolP("write", "w", false, "write result back to source file")
 	sortKeys := flags.Bool("sort-keys", false, "sort object keys alphabetically")
+	verbose := flags.Bool("verbose", false, "print repair diagnostics to stderr")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {
@@ -176,7 +209,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 			return 1
 		}
 
-		return processInput(src, "<stdin>", opts, *validateOnly, spec, stdout, stderr)
+		return processInput(src, "<stdin>", opts, *validateOnly, *verbose, spec, stdout, stderr)
 	}
 
 	code := 0
@@ -191,10 +224,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		}
 
 		if *write {
-			if writeInPlace(src, path, opts, stderr) != 0 {
+			if writeInPlace(src, path, opts, *verbose, stderr) != 0 {
 				code = 1
 			}
-		} else if processInput(src, path, opts, *validateOnly, spec, stdout, stderr) != 0 {
+		} else if processInput(src, path, opts, *validateOnly, *verbose, spec, stdout, stderr) != 0 {
 			code = 1
 		}
 	}
