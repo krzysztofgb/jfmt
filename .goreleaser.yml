@@ -35,7 +35,6 @@ homebrew_casks:
 changelog:
   use: github
   sort: asc
-  abbrev: -1
   groups:
     - title: New Features
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+'
