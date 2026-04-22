@@ -37,14 +37,13 @@ changelog:
     - title: Refactoring
       regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+'
       order: 3
-    - title: Dependency Updates
-      regexp: '^.*?deps(\([[:word:]]+\))??!?:.+'
+    - title: Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+'
       order: 4
     - title: Other
       order: 999
   filters:
     exclude:
-      - "^docs:"
       - "^test:"
       - "^chore:"
       - "^ci:"
