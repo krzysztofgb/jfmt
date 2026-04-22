@@ -49,6 +49,26 @@ func parseSpec(s string) (jfmt.Spec, bool) {
 	return 0, false
 }
 
+func applyFix(src []byte, name string, verbose bool, opts *jfmt.Options, stderr io.Writer) []byte {
+	if !verbose || opts.NoFix {
+		return src
+	}
+
+	fixed, report := jfmt.FixWithReport(src)
+	if s := report.String(); s != "" {
+		fmt.Fprintf(stderr, "jfmt: %s: %s\n", name, s)
+	}
+
+	opts.NoFix = true
+
+	return fixed
+}
+
+func writeOutput(w io.Writer, b []byte) {
+	w.Write(b)            //nolint:errcheck
+	w.Write([]byte{'\n'}) //nolint:errcheck
+}
+
 func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, useColor bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
 	if validateOnly {
 		if err := jfmt.ValidateError(src, spec); err != nil {
@@ -60,40 +80,20 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 		return 0
 	}
 
-	var out []byte
+	src = applyFix(src, name, verbose, &opts, stderr)
 
-	if verbose && !opts.NoFix {
-		fixed, report := jfmt.FixWithReport(src)
-		if s := report.String(); s != "" {
-			fmt.Fprintf(stderr, "jfmt: %s: %s\n", name, s)
-		}
+	out, err := jfmt.Format(src, opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
 
-		opts.NoFix = true
-
-		var err error
-
-		out, err = jfmt.Format(fixed, opts)
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
-
-			return 1
-		}
-	} else {
-		var err error
-
-		out, err = jfmt.Format(src, opts)
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
-
-			return 1
-		}
+		return 1
 	}
 
 	if useColor {
 		out = colorize(out)
 	}
 
-	fmt.Fprintln(stdout, string(out))
+	writeOutput(stdout, out)
 
 	return 0
 }
@@ -115,15 +115,7 @@ func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, 
 
 		lineName := fmt.Sprintf("%s:%d", name, i+1)
 
-		if verbose && !compact.NoFix {
-			fixed, report := jfmt.FixWithReport(line)
-			if s := report.String(); s != "" {
-				fmt.Fprintf(stderr, "jfmt: %s: %s\n", lineName, s)
-			}
-
-			line = fixed
-			compact.NoFix = true
-		}
+		line = applyFix(line, lineName, verbose, &compact, stderr)
 
 		out, err := jfmt.Format(line, compact)
 		if err != nil {
@@ -137,22 +129,14 @@ func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, 
 			out = colorize(out)
 		}
 
-		fmt.Fprintln(stdout, string(out))
+		writeOutput(stdout, out)
 	}
 
 	return code
 }
 
 func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stderr io.Writer) int {
-	if verbose && !opts.NoFix {
-		fixed, report := jfmt.FixWithReport(src)
-		if s := report.String(); s != "" {
-			fmt.Fprintf(stderr, "jfmt: %s: %s\n", path, s)
-		}
-
-		src = fixed
-		opts.NoFix = true
-	}
+	src = applyFix(src, path, verbose, &opts, stderr)
 
 	out, err := jfmt.Format(src, opts)
 	if err != nil {
