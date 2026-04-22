@@ -1,5 +1,5 @@
 .idea
-/jfmt
+bin/
 coverage.out
 .playwright-mcp/
 

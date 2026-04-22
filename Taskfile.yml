@@ -3,7 +3,7 @@ version: '3'
 tasks:
   build:
     cmds:
-      - go build -o jfmt ./cmd/jfmt
+      - go build -o bin/jfmt ./cmd/jfmt
 
   lint:
     cmds:
