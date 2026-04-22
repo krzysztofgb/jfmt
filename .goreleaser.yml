@@ -22,6 +22,9 @@ archives:
         formats:
           - zip
 
+binary_signs:
+  - {}
+
 homebrew_casks:
   - name: jfmt
     repository:
