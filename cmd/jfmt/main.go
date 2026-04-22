@@ -122,6 +122,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	specStr := flags.StringP("spec", "s", "rfc8259", "json spec: rfc8259, rfc7159, rfc4627, ecma404, skip")
 	validateOnly := flags.BoolP("validate", "v", false, "validate only, no output")
 	write := flags.BoolP("write", "w", false, "write result back to source file")
+	sortKeys := flags.Bool("sort-keys", false, "sort object keys alphabetically")
 	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
 
 	if err := flags.Parse(args); err != nil {
@@ -141,8 +142,9 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 	}
 
 	opts := jfmt.Options{
-		Spec:  spec,
-		NoFix: *noFix,
+		Spec:     spec,
+		NoFix:    *noFix,
+		SortKeys: *sortKeys,
 	}
 
 	switch {

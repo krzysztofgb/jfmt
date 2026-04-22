@@ -6,6 +6,22 @@ import (
 	"fmt"
 )
 
+// sortKeys unmarshals src and re-marshals it, causing object keys to be sorted.
+// Numeric precision beyond float64 is not preserved.
+func sortKeys(src []byte) ([]byte, error) {
+	var v any
+	if err := json.Unmarshal(src, &v); err != nil {
+		return nil, err
+	}
+
+	out, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 // Spec identifies the JSON specification to validate against.
 type Spec int
 
@@ -20,10 +36,11 @@ const (
 // Options controls formatting and validation behavior.
 // Fix is enabled by default; set NoFix to disable it.
 type Options struct {
-	Indent  string // indent string; ignored when Compact is true
-	Compact bool   // produce compact JSON; overrides Indent
-	Spec    Spec   // JSON specification to validate against
-	NoFix   bool   // disable automatic JSON repair
+	Indent   string // indent string; ignored when Compact is true
+	Compact  bool   // produce compact JSON; overrides Indent
+	Spec     Spec   // JSON specification to validate against
+	NoFix    bool   // disable automatic JSON repair
+	SortKeys bool   // sort object keys alphabetically
 }
 
 // Format repairs (unless opts.NoFix is set), validates, and formats src.
@@ -36,6 +53,15 @@ func Format(src []byte, opts Options) ([]byte, error) {
 	if opts.Spec != SpecSkip {
 		if err := checkSpec(src, opts.Spec); err != nil {
 			return nil, err
+		}
+	}
+
+	if opts.SortKeys {
+		var err error
+
+		src, err = sortKeys(src)
+		if err != nil {
+			return nil, fmt.Errorf("sort keys: %w", err)
 		}
 	}
 
