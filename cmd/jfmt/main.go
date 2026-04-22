@@ -65,8 +65,7 @@ func applyFix(src []byte, name string, verbose bool, opts *jfmt.Options, stderr 
 }
 
 func writeOutput(w io.Writer, b []byte) {
-	w.Write(b)            //nolint:errcheck
-	w.Write([]byte{'\n'}) //nolint:errcheck
+	w.Write(append(b, '\n')) //nolint:errcheck
 }
 
 func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, useColor bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
