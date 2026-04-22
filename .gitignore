@@ -1,5 +1,5 @@
 .idea
-jfmt
+/jfmt
 coverage.out
 .playwright-mcp/
 
