@@ -3,6 +3,7 @@ package jfmt
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -92,16 +93,57 @@ func Format(src []byte, opts Options) ([]byte, error) {
 // Validate reports whether src is valid JSON under spec.
 // SpecSkip always returns true.
 func Validate(src []byte, spec Spec) bool {
+	return ValidateError(src, spec) == nil
+}
+
+// ValidateError returns a descriptive error if src is invalid under spec, or nil if valid.
+// SpecSkip always returns nil.
+func ValidateError(src []byte, spec Spec) error {
 	if spec == SpecSkip {
-		return true
+		return nil
 	}
 
-	return checkSpec(src, spec) == nil
+	return checkSpec(src, spec)
+}
+
+func syntaxLocation(src []byte) (line, col int) {
+	dec := json.NewDecoder(bytes.NewReader(src))
+	for {
+		_, err := dec.Token()
+		if err == nil {
+			continue
+		}
+
+		var se *json.SyntaxError
+		if errors.As(err, &se) {
+			off := int(se.Offset)
+			if off > 0 {
+				off--
+			}
+
+			line = 1
+			col = 1
+
+			for i := 0; i < off && i < len(src); i++ {
+				if src[i] == '\n' {
+					line++
+					col = 1
+				} else {
+					col++
+				}
+			}
+		}
+
+		break
+	}
+
+	return line, col
 }
 
 func checkSpec(src []byte, spec Spec) error {
 	if !json.Valid(src) {
-		return fmt.Errorf("invalid JSON")
+		line, col := syntaxLocation(src)
+		return fmt.Errorf("invalid JSON at line %d, column %d", line, col)
 	}
 
 	if spec == RFC4627 {

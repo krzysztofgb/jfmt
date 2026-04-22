@@ -50,8 +50,8 @@ func parseSpec(s string) (jfmt.Spec, bool) {
 
 func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
 	if validateOnly {
-		if !jfmt.Validate(src, spec) {
-			fmt.Fprintf(stderr, "jfmt: %s: invalid JSON\n", name)
+		if err := jfmt.ValidateError(src, spec); err != nil {
+			fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
 
 			return 1
 		}
