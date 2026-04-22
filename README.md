@@ -6,7 +6,13 @@ A JSON formatter and validator for the command line, also importable as a Go lib
 
 ## Install
 
-Pre-built binaries for Linux, macOS, and Windows are available on the [releases page](https://github.com/krzysztofgb/jfmt/releases), built with [GoReleaser](https://goreleaser.com).
+**Homebrew (macOS and Linux):**
+
+```
+brew install --cask krzysztofgb/tap/jfmt
+```
+
+Pre-built binaries for Linux, macOS, and Windows are also available on the [releases page](https://github.com/krzysztofgb/jfmt/releases), built with [GoReleaser](https://goreleaser.com).
 
 To install from source:
 
