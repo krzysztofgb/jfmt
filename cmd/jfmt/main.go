@@ -47,6 +47,29 @@ func parseSpec(s string) (jfmt.Spec, bool) {
 	return 0, false
 }
 
+func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
+	if validateOnly {
+		if !jfmt.Validate(src, spec) {
+			fmt.Fprintf(stderr, "jfmt: %s: invalid JSON\n", name)
+
+			return 1
+		}
+
+		return 0
+	}
+
+	out, err := jfmt.Format(src, opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
+
+		return 1
+	}
+
+	fmt.Fprintln(stdout, string(out))
+
+	return 0
+}
+
 func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
 	flags := flag.NewFlagSet("jfmt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -75,45 +98,6 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		return 1
 	}
 
-	var src []byte
-
-	switch flags.NArg() {
-	case 0:
-		var err error
-
-		src, err = io.ReadAll(stdin)
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: read stdin: %v\n", err)
-
-			return 1
-		}
-
-	case 1:
-		var err error
-
-		src, err = os.ReadFile(flags.Arg(0))
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: %v\n", err)
-
-			return 1
-		}
-
-	default:
-		fmt.Fprintln(stderr, "usage: jfmt [flags] [file]")
-
-		return 1
-	}
-
-	if *validateOnly {
-		if !jfmt.Validate(src, spec) {
-			fmt.Fprintln(stderr, "jfmt: invalid JSON")
-
-			return 1
-		}
-
-		return 0
-	}
-
 	opts := jfmt.Options{
 		Spec:  spec,
 		NoFix: *noFix,
@@ -132,16 +116,36 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 		}
 	}
 
-	out, err := jfmt.Format(src, opts)
-	if err != nil {
-		fmt.Fprintf(stderr, "jfmt: %v\n", err)
+	files := flags.Args()
 
-		return 1
+	if len(files) == 0 {
+		src, err := io.ReadAll(stdin)
+		if err != nil {
+			fmt.Fprintf(stderr, "jfmt: read stdin: %v\n", err)
+
+			return 1
+		}
+
+		return processInput(src, "<stdin>", opts, *validateOnly, spec, stdout, stderr)
 	}
 
-	fmt.Fprintln(stdout, string(out))
+	code := 0
 
-	return 0
+	for _, path := range files {
+		src, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Fprintf(stderr, "jfmt: %v\n", err)
+			code = 1
+
+			continue
+		}
+
+		if processInput(src, path, opts, *validateOnly, spec, stdout, stderr) != 0 {
+			code = 1
+		}
+	}
+
+	return code
 }
 
 func main() {
