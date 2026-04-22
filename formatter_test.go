@@ -11,7 +11,6 @@ func TestFormat_pretty(t *testing.T) {
 
 	input := []byte(`{"b":2,"a":1}`)
 	got, err := jfmt.Format(input, jfmt.Options{Indent: "  ", NoFix: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -28,7 +27,6 @@ func TestFormat_compact(t *testing.T) {
 
 	input := []byte(`{  "a" :  1  }`)
 	got, err := jfmt.Format(input, jfmt.Options{Compact: true, NoFix: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +79,6 @@ func TestFormat_specSkip_noValidation(t *testing.T) {
 	// SpecSkip still requires syntactically valid JSON for formatting to succeed,
 	// but does not enforce spec-level constraints like RFC4627 root type.
 	_, err := jfmt.Format([]byte(`"just a string"`), jfmt.Options{Spec: jfmt.SpecSkip, NoFix: true})
-
 	if err != nil {
 		t.Errorf("SpecSkip should not reject a valid JSON string: %v", err)
 	}
@@ -91,7 +88,6 @@ func TestFormat_fix_singleQuotes(t *testing.T) {
 	t.Parallel()
 
 	got, err := jfmt.Format([]byte(`{'key':'value'}`), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -107,7 +103,6 @@ func TestFormat_fix_trailingComma(t *testing.T) {
 	t.Parallel()
 
 	got, err := jfmt.Format([]byte(`{"a":1,"b":2,}`), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -123,7 +118,6 @@ func TestFormat_fix_unquotedKeys(t *testing.T) {
 	t.Parallel()
 
 	got, err := jfmt.Format([]byte(`{key: "value"}`), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -139,7 +133,6 @@ func TestFormat_fix_numericKeys(t *testing.T) {
 	t.Parallel()
 
 	got, err := jfmt.Format([]byte(`{1: "one", 2: "two"}`), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -159,7 +152,6 @@ func TestFormat_fix_comments(t *testing.T) {
 		"b": /* block comment */ 2
 	}`
 	got, err := jfmt.Format([]byte(input), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +167,6 @@ func TestFormat_fix_caseInsensitiveLiterals(t *testing.T) {
 	t.Parallel()
 
 	got, err := jfmt.Format([]byte(`[True, False, Null, TRUE, FALSE, NULL]`), jfmt.Options{Compact: true})
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -169,22 +169,22 @@ func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stde
 	}
 
 	if _, err = tmp.Write(out); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
 
 		return 1
 	}
 
 	if err = tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
 
 		return 1
 	}
 
 	if err = os.Rename(tmp.Name(), path); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
 
 		return 1
@@ -217,6 +217,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int
 
 	if *showVersion {
 		fmt.Fprintf(stdout, "jfmt %s\n", version)
+
 		return 0
 	}
 

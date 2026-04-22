@@ -240,7 +240,7 @@ func (f *fixer) scanDoubleString() {
 			return
 
 		case c < 0x20:
-			f.out.WriteString(fmt.Sprintf(`\u%04x`, c))
+			fmt.Fprintf(&f.out, `\u%04x`, c)
 			f.pos++
 			f.report.ControlChars++
 
@@ -289,7 +289,7 @@ func (f *fixer) scanSingleString() {
 			return
 
 		case c < 0x20:
-			f.out.WriteString(fmt.Sprintf(`\u%04x`, c))
+			fmt.Fprintf(&f.out, `\u%04x`, c)
 			f.pos++
 
 		default:
@@ -339,7 +339,7 @@ func (f *fixer) scanUnquotedKey() {
 		case b == '\\':
 			f.out.WriteString(`\\`)
 		case b < 0x20:
-			f.out.WriteString(fmt.Sprintf(`\u%04x`, b))
+			fmt.Fprintf(&f.out, `\u%04x`, b)
 		default:
 			f.out.WriteByte(b)
 		}

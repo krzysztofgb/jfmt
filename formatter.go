@@ -143,6 +143,7 @@ func syntaxLocation(src []byte) (line, col int) {
 func checkSpec(src []byte, spec Spec) error {
 	if !json.Valid(src) {
 		line, col := syntaxLocation(src)
+
 		return fmt.Errorf("invalid JSON at line %d, column %d", line, col)
 	}
 

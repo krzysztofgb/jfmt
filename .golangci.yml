@@ -23,17 +23,21 @@ linters:
     - unused
     - usestdlibvars
     - usetesting
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    exhaustruct:
+      exclude:
+        - 'github\.com/krzysztofgb/jfmt\.Options'
+        - 'github\.com/krzysztofgb/jfmt\.fixer'
 
 formatters:
   enable:
     - gci
     - gofumpt
-
-linters-settings:
-  exhaustruct:
-    exclude:
-      - 'github\.com/krzysztofgb/jfmt\.Options'
-      - 'github\.com/krzysztofgb/jfmt\.fixer'
 
 issues:
   max-issues-per-linter: 0
