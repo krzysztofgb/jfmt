@@ -1,0 +1,8 @@
+on:
+  push:
+    tags-ignore:
+      - '*' # Ignore all tags to prevent triggering this workflow on tag pushes
+name: Run Tests
+jobs:
+  run-tests:
+    uses: ./.github/workflows/test.yml

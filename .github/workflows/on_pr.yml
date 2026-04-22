@@ -1,0 +1,18 @@
+on: [pull_request]
+jobs:
+  run-linters:
+    name: Run Linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Tools
+        uses: jdx/mise-action@v2
+
+      - name: Lint Code
+        run: task lint
+
+  run-tests:
+    name: Run Tests
+    uses: ./.github/workflows/test.yml
