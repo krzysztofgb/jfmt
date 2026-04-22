@@ -214,6 +214,8 @@ func (f *fixer) skipBlockComment() {
 
 		f.pos++
 	}
+
+	f.report.BlockComments++ // unterminated: consumed to EOF
 }
 
 func (f *fixer) scanDoubleString() {
@@ -291,6 +293,7 @@ func (f *fixer) scanSingleString() {
 		case c < 0x20:
 			fmt.Fprintf(&f.out, `\u%04x`, c)
 			f.pos++
+			f.report.ControlChars++
 
 		default:
 			f.out.WriteByte(c)

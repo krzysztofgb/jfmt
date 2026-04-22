@@ -25,7 +25,11 @@ func isTerminal(f *os.File) bool {
 // colorize applies ANSI syntax highlighting to formatted JSON.
 // Keys are bold, strings are green, numbers are cyan, booleans/null are yellow.
 func colorize(src []byte) []byte {
-	var out bytes.Buffer
+	var (
+		out       bytes.Buffer
+		stack     []byte // 'o' = object, 'a' = array
+		expectKey bool
+	)
 
 	i := 0
 
@@ -33,14 +37,46 @@ func colorize(src []byte) []byte {
 		c := src[i]
 
 		switch {
-		case c == '"':
-			// Look back to determine if this is a key (preceded by { or , at the same level)
-			isKey := isObjectKey(src, i)
+		case c == '{':
+			stack = append(stack, 'o')
+			expectKey = true
+			out.WriteByte(c)
+			i++
 
+		case c == '[':
+			stack = append(stack, 'a')
+			expectKey = false
+			out.WriteByte(c)
+			i++
+
+		case c == '}' || c == ']':
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+
+			expectKey = false
+			out.WriteByte(c)
+			i++
+
+		case c == ',':
+			if len(stack) > 0 && stack[len(stack)-1] == 'o' {
+				expectKey = true
+			}
+
+			out.WriteByte(c)
+			i++
+
+		case c == ':':
+			expectKey = false
+			out.WriteByte(c)
+			i++
+
+		case c == '"':
 			end := scanStringEnd(src, i+1)
 
-			if isKey {
+			if expectKey {
 				out.WriteString(ansiBold)
+				expectKey = false
 			} else {
 				out.WriteString(ansiGreen)
 			}
@@ -84,6 +120,7 @@ func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
 
+// scanStringEnd returns the index of the closing '"', or len(src)-1 if unterminated.
 func scanStringEnd(src []byte, i int) int {
 	for i < len(src) {
 		if src[i] == '\\' {
@@ -99,20 +136,11 @@ func scanStringEnd(src []byte, i int) int {
 		i++
 	}
 
-	return i
-}
-
-func isObjectKey(src []byte, pos int) bool {
-	j := pos - 1
-	for j >= 0 && (src[j] == ' ' || src[j] == '\t' || src[j] == '\n' || src[j] == '\r') {
-		j--
+	if len(src) == 0 {
+		return 0
 	}
 
-	if j < 0 {
-		return false
-	}
-
-	return src[j] == '{' || src[j] == ','
+	return len(src) - 1
 }
 
 func matchKeyword(src []byte, i int) (string, int) {
