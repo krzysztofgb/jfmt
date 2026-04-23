@@ -83,20 +83,22 @@ line and block comments, trailing commas, and unescaped control characters.
 
 **CI / scripting**
 
-| Flag          | Short | Description                                                         |
-|---------------|-------|---------------------------------------------------------------------|
-| `--check`     |       | Exit non-zero if any input is not formatted (no output)             |
-| `--diff`      | `-d`  | Display diff of changes that would be made                          |
-| `--recursive` | `-r`  | Recursively find and process `.json` files in directories           |
+| Flag            | Short | Description                                               |
+|-----------------|-------|-----------------------------------------------------------|
+| `--check`       |       | Exit non-zero if any input is not formatted (no output)   |
+| `--diff`        | `-d`  | Display diff of changes that would be made                |
+| `--recursive`   | `-r`  | Recursively find and process `.json` files in directories |
+| `--quiet`       | `-q`  | Suppress non-error output (useful with `--check`)         |
 
 **Other**
 
-| Flag          | Short | Description                                    |
-|---------------|-------|------------------------------------------------|
-| `--jsonlines` | `-l`  | Process input as newline-delimited JSON (NDJSON) |
-| `--config`    |       | Path to config file                            |
-| `--no-config` |       | Ignore config file                             |
-| `--version`   | `-V`  | Print version and exit                         |
+| Flag               | Short | Description                                               |
+|--------------------|-------|-----------------------------------------------------------|
+| `--jsonlines`      | `-l`  | Process input as newline-delimited JSON (NDJSON)          |
+| `--stdin-filename` |       | Filename for error messages when reading from stdin       |
+| `--config`         |       | Path to config file                                       |
+| `--no-config`      |       | Ignore config file                                        |
+| `--version`        | `-V`  | Print version and exit                                    |
 
 ```bash
 jfmt data.json

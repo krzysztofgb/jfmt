@@ -1,8 +1,21 @@
+name: CI
 on:
   push:
     tags-ignore:
-      - '*' # Ignore all tags to prevent triggering this workflow on tag pushes
-name: Run Tests
+      - '*'
 jobs:
-  run-tests:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Install Tools
+        uses: jdx/mise-action@v4
+
+      - name: Lint
+        run: task lint
+
+  test:
     uses: ./.github/workflows/test.yml
