@@ -52,41 +52,42 @@ line and block comments, trailing commas, and unescaped control characters.
 
 **Formatting**
 
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--template` | `-t` | `twospace` | Indent template: `fourspace`, `threespace`, `twospace`, `onetab`, `compact` |
-| `--indent` | `-i` | | Custom indent string (overrides `--template`) |
-| `--compact` | `-c` | | Compact output (overrides `--template` and `--indent`) |
-| `--sort-keys` | | | Sort object keys alphabetically |
+| Flag          | Short | Default    | Description                                                                 |
+|---------------|-------|------------|-----------------------------------------------------------------------------|
+| `--template`  | `-t`  | `twospace` | Indent template: `fourspace`, `threespace`, `twospace`, `onetab`, `compact` |
+| `--indent`    | `-i`  |            | Custom indent string (overrides `--template`)                               |
+| `--compact`   | `-c`  |            | Compact output (overrides `--template` and `--indent`)                      |
+| `--sort-keys` |       |            | Sort object keys alphabetically                                             |
 
 **Validation**
 
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--spec` | `-s` | `rfc8259` | JSON spec to validate against: `rfc8259`, `rfc7159`, `rfc4627`, `ecma404`, `skip` |
-| `--validate` | `-v` | | Validate only, no output |
+| Flag         | Short | Default   | Description                                                              |
+|--------------|-------|-----------|--------------------------------------------------------------------------|
+| `--spec`     | `-s`  | `rfc8259` | JSON spec to validate against: `rfc8259`, `rfc7159`, `rfc4627`, `ecma404`, `skip` |
+| `--validate` | `-v`  |           | Validate only, no output                                                 |
 
 **Output**
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--write` | `-w` | Write result back to source file |
-| `--color` | | Force color output |
-| `--no-color` | | Disable color output |
+| Flag        | Short | Description                    |
+|-------------|-------|--------------------------------|
+| `--write`   | `-w`  | Write result back to source file |
+| `--color`   |       | Force color output             |
+| `--no-color`|       | Disable color output           |
 
 **Repair**
 
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Print repair diagnostics to stderr |
-| `--no-fix` | Disable automatic JSON repair |
+| Flag        | Description                          |
+|-------------|--------------------------------------|
+| `--verbose` | Print repair diagnostics to stderr   |
+| `--no-fix`  | Disable automatic JSON repair        |
 
 **Other**
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--jsonlines` | `-l` | Process input as newline-delimited JSON (NDJSON) |
-| `--version` | `-V` | Print version and exit |
+| Flag          | Short | Description                              |
+|---------------|-------|------------------------------------------|
+| `--jsonlines` | `-l`  | Process input as newline-delimited JSON (NDJSON) |
+| `--no-config` |       | Ignore config file                       |
+| `--version`   | `-V`  | Print version and exit                   |
 
 ```bash
 jfmt data.json
@@ -100,6 +101,29 @@ jfmt -cvs rfc4627 data.json
 jfmt --sort-keys data.json
 jfmt --verbose data.json
 cat ndjson.log | jfmt -l
+```
+
+## Configuration
+
+jfmt looks for a config file at:
+
+- **macOS/Linux**: `$XDG_CONFIG_HOME/jfmt/config.toml` (defaults to `~/.config/jfmt/config.toml`)
+- **Windows**: `%APPDATA%\jfmt\config.toml`
+
+A missing config file is silently ignored. Use `--no-config` to bypass it entirely for scripting.
+
+All keys are optional and correspond to their flag equivalents. CLI flags always take priority over config values.
+
+```toml
+# ~/.config/jfmt/config.toml
+
+template  = "fourspace"   # fourspace | threespace | twospace | onetab | compact
+spec      = "rfc8259"     # rfc8259 | rfc7159 | rfc4627 | ecma404 | skip
+sort_keys = false
+no_fix    = false
+color     = false
+no_color  = false
+verbose   = false
 ```
 
 ## Library
@@ -129,11 +153,11 @@ fixed, report := jfmt.FixWithReport(src) // report describes what was changed
 
 Runnable examples are in [examples/](examples/).
 
-| Example | Demonstrates |
-|---------|-------------|
-| [examples/format](examples/format/main.go) | indent templates, compact output |
-| [examples/validate](examples/validate/main.go) | spec validation across RFC 8259 and RFC 4627 |
-| [examples/repair](examples/repair/main.go) | Fix and auto-repair in Format |
+| Example                                            | Demonstrates                                      |
+|----------------------------------------------------|---------------------------------------------------|
+| [examples/format](examples/format/main.go)         | indent templates, compact output                  |
+| [examples/validate](examples/validate/main.go)     | spec validation across RFC 8259 and RFC 4627      |
+| [examples/repair](examples/repair/main.go)         | Fix and auto-repair in Format                     |
 
 ## Benchmarks
 
