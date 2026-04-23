@@ -8,6 +8,7 @@ import (
 const (
 	ansiReset  = "\x1b[0m"
 	ansiBold   = "\x1b[1m"
+	ansiRed    = "\x1b[31m"
 	ansiGreen  = "\x1b[32m"
 	ansiCyan   = "\x1b[36m"
 	ansiYellow = "\x1b[33m"

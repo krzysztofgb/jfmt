@@ -68,6 +68,12 @@ func writeOutput(w io.Writer, b []byte) {
 	w.Write(append(b, '\n')) //nolint:errcheck
 }
 
+func formatBytes(src []byte, name string, opts jfmt.Options, verbose bool, stderr io.Writer) ([]byte, error) {
+	src = applyFix(src, name, verbose, &opts, stderr)
+
+	return jfmt.Format(src, opts)
+}
+
 func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool, verbose bool, useColor bool, spec jfmt.Spec, stdout io.Writer, stderr io.Writer) int {
 	if validateOnly {
 		if err := jfmt.ValidateError(src, spec); err != nil {
@@ -79,9 +85,7 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 		return 0
 	}
 
-	src = applyFix(src, name, verbose, &opts, stderr)
-
-	out, err := jfmt.Format(src, opts)
+	out, err := formatBytes(src, name, opts, verbose, stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", name, err)
 
@@ -93,6 +97,34 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 	}
 
 	writeOutput(stdout, out)
+
+	return 0
+}
+
+func processCheckDiff(src []byte, name string, opts jfmt.Options, verbose bool, check, diff bool, useColor bool, stdout, stderr io.Writer) int {
+	formatted, err := formatBytes(src, name, opts, verbose, stderr)
+	if err != nil {
+		return 1
+	}
+
+	if bytes.Equal(src, formatted) {
+		return 0
+	}
+
+	if diff {
+		d := computeDiff(name, src, formatted)
+		if useColor {
+			d = colorizeDiff(d)
+		}
+
+		fmt.Fprint(stdout, d)
+	}
+
+	if check {
+		fmt.Fprintf(stderr, "jfmt: %s: not formatted\n", name)
+
+		return 1
+	}
 
 	return 0
 }
@@ -135,9 +167,7 @@ func processJSONLines(src []byte, name string, opts jfmt.Options, verbose bool, 
 }
 
 func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stderr io.Writer) int {
-	src = applyFix(src, path, verbose, &opts, stderr)
-
-	out, err := jfmt.Format(src, opts)
+	out, err := formatBytes(src, path, opts, verbose, stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "jfmt: %s: %v\n", path, err)
 
@@ -180,6 +210,8 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	var (
 		showVersion  bool
 		noConfig     bool
+		check        bool
+		diff         bool
 		template     string
 		indent       string
 		compact      bool
@@ -221,6 +253,20 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
 				fmt.Fprintf(stdout, "jfmt %s\n", version)
+
+				return nil
+			}
+
+			if write && (check || diff) {
+				fmt.Fprintln(stderr, "jfmt: --write cannot be combined with --check or --diff")
+				*exitCode = 1
+
+				return nil
+			}
+
+			if validateOnly && (check || diff) {
+				fmt.Fprintln(stderr, "jfmt: --validate cannot be combined with --check or --diff")
+				*exitCode = 1
 
 				return nil
 			}
@@ -272,9 +318,12 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 					return nil
 				}
 
-				if jsonLines {
+				switch {
+				case check || diff:
+					*exitCode = processCheckDiff(src, "<stdin>", opts, verbose, check, diff, useColor, stdout, stderr)
+				case jsonLines:
 					*exitCode = processJSONLines(src, "<stdin>", opts, verbose, useColor, stdout, stderr)
-				} else {
+				default:
 					*exitCode = processInput(src, "<stdin>", opts, validateOnly, verbose, useColor, spec, stdout, stderr)
 				}
 
@@ -293,6 +342,10 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 				}
 
 				switch {
+				case check || diff:
+					if processCheckDiff(src, path, opts, verbose, check, diff, useColor, stdout, stderr) != 0 {
+						code = 1
+					}
 				case write:
 					if writeInPlace(src, path, opts, verbose, stderr) != 0 {
 						code = 1
@@ -317,6 +370,8 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	flags := cmd.Flags()
 	flags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
 	flags.BoolVar(&noConfig, "no-config", false, "ignore config file")
+	flags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
+	flags.BoolVarP(&diff, "diff", "d", false, "display diff of changes that would be made")
 	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
 	flags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
 	flags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
