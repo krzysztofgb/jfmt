@@ -828,7 +828,7 @@ func TestConfigPath_XDG(t *testing.T) {
 
 	path := configPath()
 
-	want := "/custom/config/jfmt/config.toml"
+	want := filepath.Join("/custom/config", "jfmt", "config.toml")
 	if path != want {
 		t.Errorf("got %q, want %q", path, want)
 	}
