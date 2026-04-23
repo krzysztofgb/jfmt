@@ -81,18 +81,28 @@ line and block comments, trailing commas, and unescaped control characters.
 | `--verbose` | Print repair diagnostics to stderr   |
 | `--no-fix`  | Disable automatic JSON repair        |
 
+**CI / scripting**
+
+| Flag          | Short | Description                                                         |
+|---------------|-------|---------------------------------------------------------------------|
+| `--check`     |       | Exit non-zero if any input is not formatted (no output)             |
+| `--diff`      | `-d`  | Display diff of changes that would be made                          |
+| `--recursive` | `-r`  | Recursively find and process `.json` files in directories           |
+
 **Other**
 
-| Flag          | Short | Description                              |
-|---------------|-------|------------------------------------------|
+| Flag          | Short | Description                                    |
+|---------------|-------|------------------------------------------------|
 | `--jsonlines` | `-l`  | Process input as newline-delimited JSON (NDJSON) |
-| `--no-config` |       | Ignore config file                       |
-| `--version`   | `-V`  | Print version and exit                   |
+| `--config`    |       | Path to config file                            |
+| `--no-config` |       | Ignore config file                             |
+| `--version`   | `-V`  | Print version and exit                         |
 
 ```bash
 jfmt data.json
 jfmt -w data.json
 jfmt -w *.json
+jfmt -rw ./data              # format all .json files under ./data
 cat data.json | jfmt -t fourspace
 cat data.json | jfmt --compact
 jfmt -s rfc4627 --validate data.json
@@ -101,7 +111,17 @@ jfmt -cvs rfc4627 data.json
 jfmt --sort-keys data.json
 jfmt --verbose data.json
 cat ndjson.log | jfmt -l
+jfmt --check *.json          # CI: fail if any file is not formatted
+jfmt --diff data.json        # preview changes before writing
 ```
+
+## Exit codes
+
+| Code | Meaning                                                    |
+|------|------------------------------------------------------------|
+| `0`  | Success                                                    |
+| `1`  | Error (I/O failure, invalid JSON, invalid flag)            |
+| `1`  | `--check`: one or more files are not formatted             |
 
 ## Configuration
 
