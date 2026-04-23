@@ -62,6 +62,24 @@ jfmt --verbose data.json
 cat ndjson.log | jfmt -l
 ```
 
+## Shell Completion
+
+Generate and install a completion script for your shell:
+
+```bash
+# Bash
+jfmt completion bash >> ~/.bashrc
+
+# Zsh
+jfmt completion zsh >> ~/.zshrc
+
+# Fish
+jfmt completion fish > ~/.config/fish/completions/jfmt.fish
+
+# PowerShell
+jfmt completion powershell >> $PROFILE
+```
+
 Copy formatted output to the clipboard:
 
 ```bash
