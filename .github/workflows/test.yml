@@ -2,7 +2,7 @@ on:
   workflow_call:
 
 jobs:
-  run-tests:
+  test:
     strategy:
       matrix:
         go-version:
@@ -22,3 +22,15 @@ jobs:
 
       - name: Test
         run: task test
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Install Tools
+        uses: jdx/mise-action@v4
+
+      - name: Fuzz
+        run: task fuzz FUZZTIME=10s

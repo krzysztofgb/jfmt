@@ -240,6 +240,15 @@ func FuzzFormat(f *testing.F) {
 	f.Add([]byte(`{"key":"value"}`), false)
 	f.Add([]byte(`[1,2,3]`), false)
 	f.Add([]byte(`null`), true)
+	f.Add([]byte(`{}`), false)
+	f.Add([]byte(`[]`), false)
+	f.Add([]byte(`"hello"`), false)
+	f.Add([]byte(`42`), false)
+	f.Add([]byte(`true`), false)
+	f.Add([]byte(`{"nested":{"a":1},"arr":[1,2,3]}`), true)
+	f.Add([]byte(`[{"a":1},{"b":2},null,true,false,42,"str"]`), true)
+	f.Add([]byte(`{"unicode":"こんにちは","emoji":"🎉"}`), false)
+	f.Add([]byte(`{"z":3,"a":1,"m":2}`), true)
 
 	f.Fuzz(func(t *testing.T, data []byte, sortKeys bool) {
 		t.Helper()
@@ -252,6 +261,18 @@ func FuzzFormat(f *testing.F) {
 		if !jfmt.Validate(out, jfmt.RFC8259) {
 			t.Errorf("Format produced invalid JSON for input %q", data)
 		}
+
+		// Format must be idempotent: formatting already-formatted output produces the same result.
+		out2, err := jfmt.Format(out, jfmt.Options{Indent: "  ", NoFix: true, SortKeys: sortKeys})
+		if err != nil {
+			t.Errorf("Format of already-formatted output failed for input %q: %v", data, err)
+
+			return
+		}
+
+		if string(out) != string(out2) {
+			t.Errorf("Format is not idempotent for input %q:\nfirst:  %q\nsecond: %q", data, out, out2)
+		}
 	})
 }
 
@@ -259,9 +280,20 @@ func FuzzFix(f *testing.F) {
 	f.Add([]byte(`{"key":"value"}`))
 	f.Add([]byte(`{key: 'value', active: True, tags: ['a', 'b',]}`))
 	f.Add([]byte(`{"a": 1, // comment` + "\n" + `"b": 2}`))
+	f.Add([]byte(`{1: "one", 2: "two"}`))
+	f.Add([]byte(`{'a': 1, 'b': [True, False, Null]}`))
+	f.Add([]byte(`{"a": 1,}`))
+	f.Add([]byte(`/* block */ {"a": 1}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		t.Helper()
-		_ = jfmt.Fix(data)
+
+		fixed := jfmt.Fix(data)
+
+		// Fix must be idempotent: applying it twice produces the same result.
+		fixed2 := jfmt.Fix(fixed)
+		if string(fixed) != string(fixed2) {
+			t.Errorf("Fix is not idempotent for input %q:\nfirst:  %q\nsecond: %q", data, fixed, fixed2)
+		}
 	})
 }

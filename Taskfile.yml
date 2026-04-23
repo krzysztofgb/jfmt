@@ -29,4 +29,6 @@ tasks:
 
   fuzz:
     cmds:
-      - go test -v -fuzz=FuzzFormat -fuzztime=30s ./...
+      - go test -run=^$ -fuzz=FuzzFormat -fuzztime={{.FUZZTIME | default "30s"}} .
+      - go test -run=^$ -fuzz=FuzzFix -fuzztime={{.FUZZTIME | default "30s"}} .
+      - go test -run=^$ -fuzz=FuzzColorize -fuzztime={{.FUZZTIME | default "30s"}} ./cmd/jfmt/
