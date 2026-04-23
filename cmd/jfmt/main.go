@@ -210,6 +210,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	var (
 		showVersion  bool
 		noConfig     bool
+		configFile   string
 		check        bool
 		diff         bool
 		template     string
@@ -239,7 +240,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 				return nil
 			}
 
-			cfg, err := loadConfig()
+			cfg, err := loadConfig(configFile)
 			if err != nil {
 				fmt.Fprintf(stderr, "jfmt: config: %v\n", err)
 
@@ -370,6 +371,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	flags := cmd.Flags()
 	flags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
 	flags.BoolVar(&noConfig, "no-config", false, "ignore config file")
+	flags.StringVar(&configFile, "config", "", "path to config file (default: ~/.config/jfmt/config.toml)")
 	flags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
 	flags.BoolVarP(&diff, "diff", "d", false, "display diff of changes that would be made")
 	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")

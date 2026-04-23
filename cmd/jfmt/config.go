@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -84,14 +85,22 @@ func applyConfig(cmd *cobra.Command, cfg config, template, indent, spec *string,
 	}
 }
 
-func loadConfig() (config, error) {
-	path := configPath()
+func loadConfig(explicitPath string) (config, error) {
+	path := explicitPath
+	if path == "" {
+		path = configPath()
+	}
+
 	if path == "" {
 		return config{}, nil //nolint:exhaustruct
 	}
 
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		if explicitPath != "" {
+			return config{}, fmt.Errorf("config file not found: %s", explicitPath) //nolint:exhaustruct
+		}
+
 		return config{}, nil //nolint:exhaustruct
 	}
 
