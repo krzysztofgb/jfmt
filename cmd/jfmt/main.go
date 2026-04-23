@@ -275,16 +275,19 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 					continue
 				}
 
-				if write {
+				switch {
+				case write:
 					if writeInPlace(src, path, opts, verbose, stderr) != 0 {
 						code = 1
 					}
-				} else if jsonLines {
+				case jsonLines:
 					if processJSONLines(src, path, opts, verbose, useColor, stdout, stderr) != 0 {
 						code = 1
 					}
-				} else if processInput(src, path, opts, validateOnly, verbose, useColor, spec, stdout, stderr) != 0 {
-					code = 1
+				default:
+					if processInput(src, path, opts, validateOnly, verbose, useColor, spec, stdout, stderr) != 0 {
+						code = 1
+					}
 				}
 			}
 
