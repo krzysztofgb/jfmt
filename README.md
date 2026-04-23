@@ -20,51 +20,9 @@ To install from source:
 go install github.com/krzysztofgb/jfmt/cmd/jfmt@latest
 ```
 
-## Usage
+### Shell Completion
 
-```
-jfmt [flags] [file ...]
-```
-
-Reads from one or more files or stdin. Writes formatted JSON to stdout.
-
-Repair of common JSON errors is on by default: single-quoted strings,
-unquoted and numeric object keys, incorrect literals (True/False/Null),
-line and block comments, trailing commas, and unescaped control characters.
-
-```
---template, -t   fourspace | threespace | twospace | onetab | compact (default: twospace)
---indent, -i     custom indent string (overrides --template)
---compact, -c    compact output (overrides --template and --indent)
---spec, -s       rfc8259 | rfc7159 | rfc4627 | ecma404 | skip (default: rfc8259)
---validate, -v   validate only, no output
---write, -w      write result back to source file
---sort-keys      sort object keys alphabetically
---verbose        print repair diagnostics to stderr
---jsonlines, -l  process input as newline-delimited JSON (NDJSON)
---color          force color output
---no-color       disable color output
---no-fix         disable automatic JSON repair
---version, -V    print version and exit
-```
-
-```bash
-jfmt data.json
-jfmt -w data.json
-jfmt -w *.json
-cat data.json | jfmt -t fourspace
-cat data.json | jfmt --compact
-jfmt -s rfc4627 --validate data.json
-jfmt --no-fix data.json
-jfmt -cvs rfc4627 data.json
-jfmt --sort-keys data.json
-jfmt --verbose data.json
-cat ndjson.log | jfmt -l
-```
-
-## Shell Completion
-
-Generate and install a completion script for your shell:
+After installing, set up tab completion for your shell:
 
 ```bash
 # Bash
@@ -80,21 +38,73 @@ jfmt completion fish > ~/.config/fish/completions/jfmt.fish
 jfmt completion powershell >> $PROFILE
 ```
 
-Copy formatted output to the clipboard:
+## Usage
+
+```
+jfmt [flags] [file ...]
+```
+
+Reads from one or more files or stdin. Writes formatted JSON to stdout.
+
+Repair of common JSON errors is on by default: single-quoted strings,
+unquoted and numeric object keys, incorrect literals (True/False/Null),
+line and block comments, trailing commas, and unescaped control characters.
+
+**Formatting**
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--template` | `-t` | `twospace` | Indent template: `fourspace`, `threespace`, `twospace`, `onetab`, `compact` |
+| `--indent` | `-i` | | Custom indent string (overrides `--template`) |
+| `--compact` | `-c` | | Compact output (overrides `--template` and `--indent`) |
+| `--sort-keys` | | | Sort object keys alphabetically |
+
+**Validation**
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--spec` | `-s` | `rfc8259` | JSON spec to validate against: `rfc8259`, `rfc7159`, `rfc4627`, `ecma404`, `skip` |
+| `--validate` | `-v` | | Validate only, no output |
+
+**Output**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--write` | `-w` | Write result back to source file |
+| `--color` | | Force color output |
+| `--no-color` | | Disable color output |
+
+**Repair**
+
+| Flag | Description |
+|------|-------------|
+| `--verbose` | Print repair diagnostics to stderr |
+| `--no-fix` | Disable automatic JSON repair |
+
+**Other**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--jsonlines` | `-l` | Process input as newline-delimited JSON (NDJSON) |
+| `--version` | `-V` | Print version and exit |
 
 ```bash
-# macOS
-jfmt data.json | pbcopy
-
-# Linux
-jfmt data.json | xclip -selection clipboard
-jfmt data.json | xsel --clipboard --input
-
-# Windows
-jfmt data.json | clip
+jfmt data.json
+jfmt -w data.json
+jfmt -w *.json
+cat data.json | jfmt -t fourspace
+cat data.json | jfmt --compact
+jfmt -s rfc4627 --validate data.json
+jfmt --no-fix data.json
+jfmt -cvs rfc4627 data.json
+jfmt --sort-keys data.json
+jfmt --verbose data.json
+cat ndjson.log | jfmt -l
 ```
 
 ## Library
+
+Use jfmt as a Go library when you need to format, validate, or repair JSON programmatically.
 
 ```bash
 go get github.com/krzysztofgb/jfmt
@@ -119,7 +129,7 @@ fixed, report := jfmt.FixWithReport(src) // report describes what was changed
 
 Runnable examples are in [examples/](examples/).
 
-| example | demonstrates |
+| Example | Demonstrates |
 |---------|-------------|
 | [examples/format](examples/format/main.go) | indent templates, compact output |
 | [examples/validate](examples/validate/main.go) | spec validation across RFC 8259 and RFC 4627 |
