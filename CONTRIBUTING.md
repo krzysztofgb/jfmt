@@ -68,6 +68,20 @@ ci: bump golangci-lint to 2.11.4
 - Commit history should be clean: one logical change per commit.
 - PR titles must also follow the Conventional Commits format, as they feed into the automated changelog.
 
+## Use of AI tools
+
+AI assistance is welcome, but you remain fully responsible for every line you submit. Reviewers will hold AI-assisted code to the same standard as hand-written code, and "the AI wrote it" is not an explanation for a bug or a shortcut past review.
+
+Before opening a PR with AI-assisted code:
+
+- Read and understand every line. If you cannot explain a change, do not submit it.
+- Run the full test and lint suite yourself. Do not rely on the AI to verify correctness.
+- Do not regenerate code wholesale in response to review feedback. Iterate on the specific concern raised.
+
+Good uses: exploring unfamiliar APIs, drafting boilerplate, understanding existing code, generating test cases.
+
+Avoid: generating finished logic you have not reviewed, using AI output to substitute for understanding a subsystem you are modifying.
+
 ## Code style
 
 The linter enforces formatting via `gofumpt` and import ordering via `gci`. Run `task lint-fix` to apply automatic fixes. For anything the linter does not catch, prefer clarity over brevity and avoid unnecessary abstractions.
