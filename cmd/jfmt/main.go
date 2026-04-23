@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/krzysztofgb/jfmt"
-	flag "github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 )
 
 var version = "dev"
@@ -176,111 +176,166 @@ func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stde
 	return 0
 }
 
+func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command {
+	var (
+		showVersion  bool
+		template     string
+		indent       string
+		compact      bool
+		specStr      string
+		validateOnly bool
+		write        bool
+		sortKeys     bool
+		verbose      bool
+		jsonLines    bool
+		color        bool
+		noColor      bool
+		noFix        bool
+	)
+
+	cmd := &cobra.Command{ //nolint:exhaustruct
+		Use:           "jfmt [flags] [file...]",
+		Short:         "A JSON formatter and validator for the command line",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+			return []string{"json"}, cobra.ShellCompDirectiveFilterFileExt
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if showVersion {
+				fmt.Fprintf(stdout, "jfmt %s\n", version)
+
+				return nil
+			}
+
+			spec, ok := parseSpec(specStr)
+			if !ok {
+				fmt.Fprintf(stderr, "jfmt: unknown spec %q (rfc8259, rfc7159, rfc4627, ecma404, skip)\n", specStr)
+				*exitCode = 1
+
+				return nil
+			}
+
+			opts := jfmt.Options{
+				Spec:     spec,
+				NoFix:    noFix,
+				SortKeys: sortKeys,
+			}
+
+			switch {
+			case compact:
+				opts.Compact = true
+			case indent != "":
+				opts.Indent = indent
+			default:
+				if !applyTemplate(template, &opts) {
+					fmt.Fprintf(stderr, "jfmt: unknown template %q (fourspace, threespace, twospace, onetab, compact)\n", template)
+					*exitCode = 1
+
+					return nil
+				}
+			}
+
+			outFile, _ := stdout.(*os.File)
+			useColor := !noColor && (color || (outFile != nil && isTerminal(outFile)))
+
+			if len(args) == 0 {
+				if write {
+					fmt.Fprintln(stderr, "jfmt: --write requires at least one file argument")
+					*exitCode = 1
+
+					return nil
+				}
+
+				src, err := io.ReadAll(cmd.InOrStdin())
+				if err != nil {
+					fmt.Fprintf(stderr, "jfmt: read stdin: %v\n", err)
+					*exitCode = 1
+
+					return nil
+				}
+
+				if jsonLines {
+					*exitCode = processJSONLines(src, "<stdin>", opts, verbose, useColor, stdout, stderr)
+				} else {
+					*exitCode = processInput(src, "<stdin>", opts, validateOnly, verbose, useColor, spec, stdout, stderr)
+				}
+
+				return nil
+			}
+
+			code := 0
+
+			for _, path := range args {
+				src, err := os.ReadFile(path)
+				if err != nil {
+					fmt.Fprintf(stderr, "jfmt: %v\n", err)
+					code = 1
+
+					continue
+				}
+
+				if write {
+					if writeInPlace(src, path, opts, verbose, stderr) != 0 {
+						code = 1
+					}
+				} else if jsonLines {
+					if processJSONLines(src, path, opts, verbose, useColor, stdout, stderr) != 0 {
+						code = 1
+					}
+				} else if processInput(src, path, opts, validateOnly, verbose, useColor, spec, stdout, stderr) != 0 {
+					code = 1
+				}
+			}
+
+			*exitCode = code
+
+			return nil
+		},
+	}
+
+	flags := cmd.Flags()
+	flags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
+	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
+	flags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
+	flags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
+	flags.StringVarP(&specStr, "spec", "s", "rfc8259", "JSON spec (rfc8259, rfc7159, rfc4627, ecma404, skip)")
+	flags.BoolVarP(&validateOnly, "validate", "v", false, "validate only, no output")
+	flags.BoolVarP(&write, "write", "w", false, "write result back to source file")
+	flags.BoolVar(&sortKeys, "sort-keys", false, "sort object keys alphabetically")
+	flags.BoolVar(&verbose, "verbose", false, "print repair diagnostics to stderr")
+	flags.BoolVarP(&jsonLines, "jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
+	flags.BoolVar(&color, "color", false, "colorize output (default: auto)")
+	flags.BoolVar(&noColor, "no-color", false, "disable colorized output")
+	flags.BoolVar(&noFix, "no-fix", false, "disable automatic JSON repair")
+
+	//nolint:errcheck
+	cmd.RegisterFlagCompletionFunc("template", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"fourspace", "threespace", "twospace", "onetab", "compact"}, cobra.ShellCompDirectiveNoFileComp
+	})
+	//nolint:errcheck
+	cmd.RegisterFlagCompletionFunc("spec", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"rfc8259", "rfc7159", "rfc4627", "ecma404", "skip"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	return cmd
+}
+
 func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
-	flags := flag.NewFlagSet("jfmt", flag.ContinueOnError)
-	flags.SetOutput(stderr)
+	exitCode := 0
+	cmd := buildCmd(&exitCode, stdout, stderr)
+	cmd.SetArgs(args)
+	cmd.SetIn(stdin)
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
 
-	showVersion := flags.BoolP("version", "V", false, "print version and exit")
-	template := flags.StringP("template", "t", "twospace", "indent template: fourspace, threespace, twospace, onetab, compact")
-	indent := flags.StringP("indent", "i", "", "custom indent string (overrides --template)")
-	compact := flags.BoolP("compact", "c", false, "compact output (overrides --template and --indent)")
-	specStr := flags.StringP("spec", "s", "rfc8259", "json spec: rfc8259, rfc7159, rfc4627, ecma404, skip")
-	validateOnly := flags.BoolP("validate", "v", false, "validate only, no output")
-	write := flags.BoolP("write", "w", false, "write result back to source file")
-	sortKeys := flags.Bool("sort-keys", false, "sort object keys alphabetically")
-	verbose := flags.Bool("verbose", false, "print repair diagnostics to stderr")
-	jsonLines := flags.BoolP("jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
-	color := flags.Bool("color", false, "colorize output (default: auto)")
-	noColor := flags.Bool("no-color", false, "disable colorized output")
-	noFix := flags.Bool("no-fix", false, "disable automatic JSON repair")
-
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	if *showVersion {
-		fmt.Fprintf(stdout, "jfmt %s\n", version)
-
-		return 0
-	}
-
-	spec, ok := parseSpec(*specStr)
-	if !ok {
-		fmt.Fprintf(stderr, "jfmt: unknown spec %q (rfc8259, rfc7159, rfc4627, ecma404, skip)\n", *specStr)
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintf(stderr, "jfmt: %v\n", err)
 
 		return 1
 	}
 
-	opts := jfmt.Options{
-		Spec:     spec,
-		NoFix:    *noFix,
-		SortKeys: *sortKeys,
-	}
-
-	switch {
-	case *compact:
-		opts.Compact = true
-	case *indent != "":
-		opts.Indent = *indent
-	default:
-		if !applyTemplate(*template, &opts) {
-			fmt.Fprintf(stderr, "jfmt: unknown template %q (fourspace, threespace, twospace, onetab, compact)\n", *template)
-
-			return 1
-		}
-	}
-
-	outFile, _ := stdout.(*os.File)
-	useColor := !*noColor && (*color || (outFile != nil && isTerminal(outFile)))
-
-	files := flags.Args()
-
-	if len(files) == 0 {
-		if *write {
-			fmt.Fprintln(stderr, "jfmt: --write requires at least one file argument")
-
-			return 1
-		}
-
-		src, err := io.ReadAll(stdin)
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: read stdin: %v\n", err)
-
-			return 1
-		}
-
-		if *jsonLines {
-			return processJSONLines(src, "<stdin>", opts, *verbose, useColor, stdout, stderr)
-		}
-
-		return processInput(src, "<stdin>", opts, *validateOnly, *verbose, useColor, spec, stdout, stderr)
-	}
-
-	code := 0
-
-	for _, path := range files {
-		src, err := os.ReadFile(path)
-		if err != nil {
-			fmt.Fprintf(stderr, "jfmt: %v\n", err)
-			code = 1
-
-			continue
-		}
-
-		if *write {
-			if writeInPlace(src, path, opts, *verbose, stderr) != 0 {
-				code = 1
-			}
-		} else if *jsonLines {
-			if processJSONLines(src, path, opts, *verbose, useColor, stdout, stderr) != 0 {
-				code = 1
-			}
-		} else if processInput(src, path, opts, *validateOnly, *verbose, useColor, spec, stdout, stderr) != 0 {
-			code = 1
-		}
-	}
-
-	return code
+	return exitCode
 }
 
 func main() {
