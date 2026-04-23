@@ -292,12 +292,22 @@ func TestRun_checkUnformatted(t *testing.T) {
 
 	_, errOut, code := runCmd(t, `{"a":1}`, "--check")
 
-	if code == 0 {
-		t.Fatal("expected non-zero exit for unformatted input")
+	if code != 2 {
+		t.Fatalf("expected exit 2 for unformatted input, got %d", code)
 	}
 
 	if !strings.Contains(errOut, "not formatted") {
 		t.Errorf("expected 'not formatted' in stderr, got: %q", errOut)
+	}
+}
+
+func TestRun_checkInvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, _, code := runCmd(t, `{bad}`, "--check", "--no-fix")
+
+	if code != 1 {
+		t.Fatalf("expected exit 1 for invalid JSON, got %d", code)
 	}
 }
 
@@ -306,8 +316,8 @@ func TestRun_checkQuiet(t *testing.T) {
 
 	_, errOut, code := runCmd(t, `{"a":1}`, "--check", "--quiet")
 
-	if code == 0 {
-		t.Fatal("expected non-zero exit")
+	if code != 2 {
+		t.Fatalf("expected exit 2 for unformatted input, got %d", code)
 	}
 
 	if errOut != "" {
@@ -348,8 +358,8 @@ func TestRun_diffAndCheck(t *testing.T) {
 
 	out, errOut, code := runCmd(t, `{"a":1}`, "--diff", "--check")
 
-	if code == 0 {
-		t.Fatal("expected non-zero exit with --check")
+	if code != 2 {
+		t.Fatalf("expected exit 2 for unformatted input with --check, got %d", code)
 	}
 
 	if !strings.Contains(out, "---") {
@@ -358,6 +368,35 @@ func TestRun_diffAndCheck(t *testing.T) {
 
 	if !strings.Contains(errOut, "not formatted") {
 		t.Errorf("expected 'not formatted' in stderr, got: %q", errOut)
+	}
+}
+
+func TestRun_checkMultipleFiles_errorWins(t *testing.T) {
+	t.Parallel()
+
+	formatted := writeTempJSON(t, "{\n  \"a\": 1\n}")
+	unformatted := writeTempJSON(t, `{"a":1}`)
+
+	// Create a path that doesn't exist to force an I/O error.
+	missing := filepath.Join(t.TempDir(), "missing.json")
+
+	_, _, code := runCmd(t, "", "--check", formatted, unformatted, missing)
+
+	if code != 1 {
+		t.Fatalf("expected exit 1 when I/O error occurs alongside unformatted file, got %d", code)
+	}
+}
+
+func TestRun_checkMultipleFiles_allUnformatted(t *testing.T) {
+	t.Parallel()
+
+	a := writeTempJSON(t, `{"a":1}`)
+	b := writeTempJSON(t, `{"b":2}`)
+
+	_, _, code := runCmd(t, "", "--check", a, b)
+
+	if code != 2 {
+		t.Fatalf("expected exit 2 when all files are unformatted, got %d", code)
 	}
 }
 
@@ -802,7 +841,7 @@ func TestLoadConfig_valid(t *testing.T) {
 		t.Errorf("template: got %q, want %q", cfg.Template, "fourspace")
 	}
 
-	if cfg.SortKeys == nil || !*cfg.SortKeys {
+	if !cfg.SortKeys {
 		t.Error("expected sort_keys = true")
 	}
 }
@@ -894,5 +933,61 @@ func TestApplyConfig_cliOverridesConfig(t *testing.T) {
 
 	if !strings.Contains(out, "    ") {
 		t.Errorf("expected fourspace indent (CLI override), got: %q", out)
+	}
+}
+
+func TestRun_printConfig_defaults(t *testing.T) {
+	t.Parallel()
+
+	out, errOut, code := runCmd(t, "", "--no-config", "--print-config")
+
+	if code != 0 {
+		t.Fatalf("exit %d, stderr: %s", code, errOut)
+	}
+
+	if !strings.Contains(out, `template = "twospace"`) {
+		t.Errorf("expected default template in output, got: %q", out)
+	}
+
+	if !strings.Contains(out, `spec = "rfc8259"`) {
+		t.Errorf("expected default spec in output, got: %q", out)
+	}
+}
+
+func TestRun_printConfig_withConfigFile(t *testing.T) {
+	t.Parallel()
+
+	cfgPath := filepath.Join(t.TempDir(), "config.toml")
+
+	if err := os.WriteFile(cfgPath, []byte("template = \"fourspace\"\nsort_keys = true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runCmd(t, "", "--config", cfgPath, "--print-config")
+
+	if code != 0 {
+		t.Fatalf("exit %d, stderr: %s", code, errOut)
+	}
+
+	if !strings.Contains(out, `template = "fourspace"`) {
+		t.Errorf("expected fourspace template from config file, got: %q", out)
+	}
+
+	if !strings.Contains(out, "sort_keys = true") {
+		t.Errorf("expected sort_keys = true from config file, got: %q", out)
+	}
+}
+
+func TestRun_printConfig_cliFlagOverride(t *testing.T) {
+	t.Parallel()
+
+	out, errOut, code := runCmd(t, "", "--no-config", "--print-config", "--template", "compact")
+
+	if code != 0 {
+		t.Fatalf("exit %d, stderr: %s", code, errOut)
+	}
+
+	if !strings.Contains(out, `template = "compact"`) {
+		t.Errorf("expected compact template from CLI flag, got: %q", out)
 	}
 }

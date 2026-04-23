@@ -1,6 +1,8 @@
 # jfmt
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/krzysztofgb/jfmt.svg)](https://pkg.go.dev/github.com/krzysztofgb/jfmt)
+[![CI](https://github.com/krzysztofgb/jfmt/actions/workflows/on_push.yml/badge.svg)](https://github.com/krzysztofgb/jfmt/actions/workflows/on_push.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/krzysztofgb/jfmt)](https://goreportcard.com/report/github.com/krzysztofgb/jfmt)
 
 A JSON formatter and validator for the command line, also importable as a Go library.
 
@@ -98,6 +100,7 @@ line and block comments, trailing commas, and unescaped control characters.
 | `--stdin-filename` |       | Filename for error messages when reading from stdin       |
 | `--config`         |       | Path to config file                                       |
 | `--no-config`      |       | Ignore config file                                        |
+| `--print-config`   |       | Print effective configuration as TOML and exit            |
 | `--version`        | `-V`  | Print version and exit                                    |
 
 ```bash
@@ -123,7 +126,7 @@ jfmt --diff data.json        # preview changes before writing
 |------|------------------------------------------------------------|
 | `0`  | Success                                                    |
 | `1`  | Error (I/O failure, invalid JSON, invalid flag)            |
-| `1`  | `--check`: one or more files are not formatted             |
+| `2`  | `--check`: one or more files are not formatted             |
 
 ## Configuration
 
@@ -163,6 +166,9 @@ out, err := jfmt.Format(src, jfmt.Options{Compact: true})
 out, err := jfmt.Format(src, jfmt.Options{Spec: jfmt.RFC4627})
 out, err := jfmt.Format(src, jfmt.Options{SortKeys: true})
 
+// Format from a reader to a writer
+err := jfmt.FormatReader(r, w, jfmt.Options{Indent: "  "})
+
 // Validate against a spec
 ok := jfmt.Validate(src, jfmt.RFC8259)
 ok := jfmt.Validate(src, jfmt.RFC4627) // root must be object or array
@@ -171,6 +177,7 @@ err := jfmt.ValidateError(src, jfmt.RFC8259) // error includes line and column
 // Repair without formatting
 fixed := jfmt.Fix(src)
 fixed, report := jfmt.FixWithReport(src) // report describes what was changed
+err := jfmt.FixReader(r, w)
 ```
 
 Runnable examples are in [examples/](examples/).

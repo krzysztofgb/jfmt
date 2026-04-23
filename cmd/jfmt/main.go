@@ -127,7 +127,7 @@ func processCheckDiff(src []byte, name string, opts jfmt.Options, verbose bool, 
 			fmt.Fprintf(stderr, "jfmt: %s: not formatted\n", name)
 		}
 
-		return 1
+		return 2
 	}
 
 	return 0
@@ -247,8 +247,13 @@ func expandArgs(args []string, stderr io.Writer) []string {
 }
 
 func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command {
+	// cfg holds all configurable options; flags point directly into its fields
+	// so applyConfig can merge file config into it without reconstruction.
+	var cfg config
+
 	var (
 		showVersion   bool
+		printCfg      bool
 		noConfig      bool
 		configFile    string
 		quiet         bool
@@ -256,18 +261,8 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		diff          bool
 		recursive     bool
 		stdinFilename string
-		template      string
-		indent        string
-		compact       bool
-		specStr       string
 		validateOnly  bool
 		write         bool
-		sortKeys      bool
-		verbose       bool
-		jsonLines     bool
-		color         bool
-		noColor       bool
-		noFix         bool
 	)
 
 	cmd := &cobra.Command{ //nolint:exhaustruct
@@ -283,20 +278,29 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 				return nil
 			}
 
-			cfg, err := loadConfig(configFile)
+			fileCfg, err := loadConfig(configFile)
 			if err != nil {
 				fmt.Fprintf(stderr, "jfmt: config: %v\n", err)
 
 				return nil
 			}
 
-			applyConfig(cmd, cfg, &template, &indent, &specStr, &compact, &sortKeys, &verbose, &noFix, &color, &noColor, &jsonLines)
+			applyConfig(cmd, fileCfg, &cfg)
 
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
 				fmt.Fprintf(stdout, "jfmt %s\n", version)
+
+				return nil
+			}
+
+			if printCfg {
+				if err := cfg.writeTo(stdout); err != nil {
+					fmt.Fprintf(stderr, "jfmt: print-config: %v\n", err)
+					*exitCode = 1
+				}
 
 				return nil
 			}
@@ -315,9 +319,9 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 				return nil
 			}
 
-			spec, ok := parseSpec(specStr)
+			spec, ok := parseSpec(cfg.Spec)
 			if !ok {
-				fmt.Fprintf(stderr, "jfmt: unknown spec %q (rfc8259, rfc7159, rfc4627, ecma404, skip)\n", specStr)
+				fmt.Fprintf(stderr, "jfmt: unknown spec %q (rfc8259, rfc7159, rfc4627, ecma404, skip)\n", cfg.Spec)
 				*exitCode = 1
 
 				return nil
@@ -325,18 +329,18 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 			opts := jfmt.Options{
 				Spec:     spec,
-				NoFix:    noFix,
-				SortKeys: sortKeys,
+				NoFix:    cfg.NoFix,
+				SortKeys: cfg.SortKeys,
 			}
 
 			switch {
-			case compact:
+			case cfg.Compact:
 				opts.Compact = true
-			case indent != "":
-				opts.Indent = indent
+			case cfg.Indent != "":
+				opts.Indent = cfg.Indent
 			default:
-				if !applyTemplate(template, &opts) {
-					fmt.Fprintf(stderr, "jfmt: unknown template %q (fourspace, threespace, twospace, onetab, compact)\n", template)
+				if !applyTemplate(cfg.Template, &opts) {
+					fmt.Fprintf(stderr, "jfmt: unknown template %q (fourspace, threespace, twospace, onetab, compact)\n", cfg.Template)
 					*exitCode = 1
 
 					return nil
@@ -344,7 +348,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 			}
 
 			outFile, _ := stdout.(*os.File)
-			useColor := !noColor && (color || (outFile != nil && isTerminal(outFile)))
+			useColor := !cfg.NoColor && (cfg.Color || (outFile != nil && isTerminal(outFile)))
 
 			if len(args) == 0 {
 				if f, ok := cmd.InOrStdin().(*os.File); ok && isTerminal(f) {
@@ -373,11 +377,11 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 				switch {
 				case check || diff:
-					*exitCode = processCheckDiff(src, name, opts, verbose, check, diff, quiet, useColor, stdout, stderr)
-				case jsonLines:
-					*exitCode = processJSONLines(src, name, opts, verbose, useColor, stdout, stderr)
+					*exitCode = processCheckDiff(src, name, opts, cfg.Verbose, check, diff, quiet, useColor, stdout, stderr)
+				case cfg.JSONLines:
+					*exitCode = processJSONLines(src, name, opts, cfg.Verbose, useColor, stdout, stderr)
 				default:
-					*exitCode = processInput(src, name, opts, validateOnly, verbose, useColor, spec, stdout, stderr)
+					*exitCode = processInput(src, name, opts, validateOnly, cfg.Verbose, useColor, spec, stdout, stderr)
 				}
 
 				return nil
@@ -400,19 +404,21 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 				switch {
 				case check || diff:
-					if processCheckDiff(src, path, opts, verbose, check, diff, quiet, useColor, stdout, stderr) != 0 {
+					if c := processCheckDiff(src, path, opts, cfg.Verbose, check, diff, quiet, useColor, stdout, stderr); c == 1 {
 						code = 1
+					} else if c == 2 && code != 1 {
+						code = 2
 					}
 				case write:
-					if writeInPlace(src, path, opts, verbose, stderr) != 0 {
+					if writeInPlace(src, path, opts, cfg.Verbose, stderr) != 0 {
 						code = 1
 					}
-				case jsonLines:
-					if processJSONLines(src, path, opts, verbose, useColor, stdout, stderr) != 0 {
+				case cfg.JSONLines:
+					if processJSONLines(src, path, opts, cfg.Verbose, useColor, stdout, stderr) != 0 {
 						code = 1
 					}
 				default:
-					if processInput(src, path, opts, validateOnly, verbose, useColor, spec, stdout, stderr) != 0 {
+					if processInput(src, path, opts, validateOnly, cfg.Verbose, useColor, spec, stdout, stderr) != 0 {
 						code = 1
 					}
 				}
@@ -425,23 +431,23 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	}
 
 	formattingFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
-	formattingFlags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
-	formattingFlags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
-	formattingFlags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
-	formattingFlags.BoolVar(&sortKeys, "sort-keys", false, "sort object keys alphabetically")
+	formattingFlags.StringVarP(&cfg.Template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
+	formattingFlags.StringVarP(&cfg.Indent, "indent", "i", "", "custom indent string (overrides --template)")
+	formattingFlags.BoolVarP(&cfg.Compact, "compact", "c", false, "compact output (overrides --template and --indent)")
+	formattingFlags.BoolVar(&cfg.SortKeys, "sort-keys", false, "sort object keys alphabetically")
 
 	validationFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
-	validationFlags.StringVarP(&specStr, "spec", "s", "rfc8259", "JSON spec (rfc8259, rfc7159, rfc4627, ecma404, skip)")
+	validationFlags.StringVarP(&cfg.Spec, "spec", "s", "rfc8259", "JSON spec (rfc8259, rfc7159, rfc4627, ecma404, skip)")
 	validationFlags.BoolVarP(&validateOnly, "validate", "v", false, "validate only, no output")
 
 	outputFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
 	outputFlags.BoolVarP(&write, "write", "w", false, "write result back to source file")
-	outputFlags.BoolVar(&color, "color", false, "colorize output (default: auto)")
-	outputFlags.BoolVar(&noColor, "no-color", false, "disable colorized output")
+	outputFlags.BoolVar(&cfg.Color, "color", false, "colorize output (default: auto)")
+	outputFlags.BoolVar(&cfg.NoColor, "no-color", false, "disable colorized output")
 
 	repairFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
-	repairFlags.BoolVar(&verbose, "verbose", false, "print repair diagnostics to stderr")
-	repairFlags.BoolVar(&noFix, "no-fix", false, "disable automatic JSON repair")
+	repairFlags.BoolVar(&cfg.Verbose, "verbose", false, "print repair diagnostics to stderr")
+	repairFlags.BoolVar(&cfg.NoFix, "no-fix", false, "disable automatic JSON repair")
 
 	ciFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
 	ciFlags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
@@ -450,10 +456,11 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	ciFlags.BoolVarP(&recursive, "recursive", "r", false, "recursively find and process .json files in directories")
 
 	otherFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
-	otherFlags.BoolVarP(&jsonLines, "jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
+	otherFlags.BoolVarP(&cfg.JSONLines, "jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
 	otherFlags.StringVar(&stdinFilename, "stdin-filename", "", "filename to use in error messages when reading from stdin")
 	otherFlags.StringVar(&configFile, "config", "", "path to config file (default: ~/.config/jfmt/config.toml)")
 	otherFlags.BoolVar(&noConfig, "no-config", false, "ignore config file")
+	otherFlags.BoolVar(&printCfg, "print-config", false, "print effective configuration and exit")
 	otherFlags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
 
 	for _, fs := range []*pflag.FlagSet{formattingFlags, validationFlags, outputFlags, repairFlags, ciFlags, otherFlags} {

@@ -1,6 +1,9 @@
 package jfmt_test
 
 import (
+	"bytes"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/krzysztofgb/jfmt"
@@ -61,3 +64,77 @@ func TestFixString(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+func TestFormatReader(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := jfmt.FormatReader(strings.NewReader(`{"b":2,"a":1}`), &buf, jfmt.Options{Indent: "  ", NoFix: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "{\n  \"b\": 2,\n  \"a\": 1\n}"
+	if got := buf.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatReader_compact(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := jfmt.FormatReader(strings.NewReader("{\n  \"a\": 1\n}"), &buf, jfmt.Options{Compact: true, NoFix: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := buf.String(); got != `{"a":1}` {
+		t.Errorf("got %q, want %q", got, `{"a":1}`)
+	}
+}
+
+func TestFormatReader_invalid(t *testing.T) {
+	t.Parallel()
+
+	err := jfmt.FormatReader(strings.NewReader(`{bad}`), io.Discard, jfmt.Options{NoFix: true})
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestFormatReader_readError(t *testing.T) {
+	t.Parallel()
+
+	err := jfmt.FormatReader(errReader{}, io.Discard, jfmt.Options{})
+	if err == nil {
+		t.Fatal("expected error from reader")
+	}
+}
+
+func TestFixReader(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := jfmt.FixReader(strings.NewReader(`{'key':'value'}`), &buf); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := buf.String(); got != `{"key":"value"}` {
+		t.Errorf("got %q, want %q", got, `{"key":"value"}`)
+	}
+}
+
+func TestFixReader_readError(t *testing.T) {
+	t.Parallel()
+
+	err := jfmt.FixReader(errReader{}, io.Discard)
+	if err == nil {
+		t.Fatal("expected error from reader")
+	}
+}
+
+// errReader always returns an error on Read.
+type errReader struct{}
+
+func (errReader) Read(_ []byte) (int, error) { return 0, io.ErrUnexpectedEOF }

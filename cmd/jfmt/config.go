@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,15 +14,20 @@ import (
 
 type config struct {
 	Template  string `toml:"template"`
-	Indent    string `toml:"indent"`
-	Compact   *bool  `toml:"compact"`
+	Indent    string `toml:"indent,omitempty"`
+	Compact   bool   `toml:"compact"`
 	Spec      string `toml:"spec"`
-	SortKeys  *bool  `toml:"sort_keys"`
-	Verbose   *bool  `toml:"verbose"`
-	NoFix     *bool  `toml:"no_fix"`
-	Color     *bool  `toml:"color"`
-	NoColor   *bool  `toml:"no_color"`
-	JSONLines *bool  `toml:"jsonlines"`
+	SortKeys  bool   `toml:"sort_keys"`
+	Verbose   bool   `toml:"verbose"`
+	NoFix     bool   `toml:"no_fix"`
+	Color     bool   `toml:"color"`
+	NoColor   bool   `toml:"no_color"`
+	JSONLines bool   `toml:"jsonlines"`
+}
+
+// writeTo encodes the config as TOML and writes it to w.
+func (c config) writeTo(w io.Writer) error {
+	return toml.NewEncoder(w).Encode(c)
 }
 
 func configPath() string {
@@ -43,45 +49,47 @@ func configPath() string {
 	return filepath.Join(home, ".config", "jfmt", "config.toml")
 }
 
-func applyConfig(cmd *cobra.Command, cfg config, template, indent, spec *string, compact, sortKeys, verbose, noFix, color, noColor, jsonLines *bool) {
-	if !cmd.Flags().Changed("template") && cfg.Template != "" {
-		*template = cfg.Template
+// applyConfig merges non-zero file config values into cfg, skipping any field
+// whose corresponding CLI flag was explicitly set.
+func applyConfig(cmd *cobra.Command, fileCfg config, cfg *config) {
+	if !cmd.Flags().Changed("template") && fileCfg.Template != "" {
+		cfg.Template = fileCfg.Template
 	}
 
-	if !cmd.Flags().Changed("indent") && cfg.Indent != "" {
-		*indent = cfg.Indent
+	if !cmd.Flags().Changed("indent") && fileCfg.Indent != "" {
+		cfg.Indent = fileCfg.Indent
 	}
 
-	if !cmd.Flags().Changed("spec") && cfg.Spec != "" {
-		*spec = cfg.Spec
+	if !cmd.Flags().Changed("spec") && fileCfg.Spec != "" {
+		cfg.Spec = fileCfg.Spec
 	}
 
-	if !cmd.Flags().Changed("compact") && cfg.Compact != nil {
-		*compact = *cfg.Compact
+	if !cmd.Flags().Changed("compact") && fileCfg.Compact {
+		cfg.Compact = true
 	}
 
-	if !cmd.Flags().Changed("sort-keys") && cfg.SortKeys != nil {
-		*sortKeys = *cfg.SortKeys
+	if !cmd.Flags().Changed("sort-keys") && fileCfg.SortKeys {
+		cfg.SortKeys = true
 	}
 
-	if !cmd.Flags().Changed("verbose") && cfg.Verbose != nil {
-		*verbose = *cfg.Verbose
+	if !cmd.Flags().Changed("verbose") && fileCfg.Verbose {
+		cfg.Verbose = true
 	}
 
-	if !cmd.Flags().Changed("no-fix") && cfg.NoFix != nil {
-		*noFix = *cfg.NoFix
+	if !cmd.Flags().Changed("no-fix") && fileCfg.NoFix {
+		cfg.NoFix = true
 	}
 
-	if !cmd.Flags().Changed("color") && cfg.Color != nil {
-		*color = *cfg.Color
+	if !cmd.Flags().Changed("color") && fileCfg.Color {
+		cfg.Color = true
 	}
 
-	if !cmd.Flags().Changed("no-color") && cfg.NoColor != nil {
-		*noColor = *cfg.NoColor
+	if !cmd.Flags().Changed("no-color") && fileCfg.NoColor {
+		cfg.NoColor = true
 	}
 
-	if !cmd.Flags().Changed("jsonlines") && cfg.JSONLines != nil {
-		*jsonLines = *cfg.JSONLines
+	if !cmd.Flags().Changed("jsonlines") && fileCfg.JSONLines {
+		cfg.JSONLines = true
 	}
 }
 
