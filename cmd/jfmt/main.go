@@ -10,6 +10,7 @@ import (
 
 	"github.com/krzysztofgb/jfmt"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var version = "dev"
@@ -423,27 +424,41 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		},
 	}
 
-	flags := cmd.Flags()
-	flags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
-	flags.BoolVar(&noConfig, "no-config", false, "ignore config file")
-	flags.StringVar(&configFile, "config", "", "path to config file (default: ~/.config/jfmt/config.toml)")
-	flags.StringVar(&stdinFilename, "stdin-filename", "", "filename to use in error messages when reading from stdin")
-	flags.BoolVarP(&recursive, "recursive", "r", false, "recursively find and process .json files in directories")
-	flags.BoolVarP(&quiet, "quiet", "q", false, "suppress non-error output")
-	flags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
-	flags.BoolVarP(&diff, "diff", "d", false, "display diff of changes that would be made")
-	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
-	flags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
-	flags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
-	flags.StringVarP(&specStr, "spec", "s", "rfc8259", "JSON spec (rfc8259, rfc7159, rfc4627, ecma404, skip)")
-	flags.BoolVarP(&validateOnly, "validate", "v", false, "validate only, no output")
-	flags.BoolVarP(&write, "write", "w", false, "write result back to source file")
-	flags.BoolVar(&sortKeys, "sort-keys", false, "sort object keys alphabetically")
-	flags.BoolVar(&verbose, "verbose", false, "print repair diagnostics to stderr")
-	flags.BoolVarP(&jsonLines, "jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
-	flags.BoolVar(&color, "color", false, "colorize output (default: auto)")
-	flags.BoolVar(&noColor, "no-color", false, "disable colorized output")
-	flags.BoolVar(&noFix, "no-fix", false, "disable automatic JSON repair")
+	formattingFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	formattingFlags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
+	formattingFlags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
+	formattingFlags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
+	formattingFlags.BoolVar(&sortKeys, "sort-keys", false, "sort object keys alphabetically")
+
+	validationFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	validationFlags.StringVarP(&specStr, "spec", "s", "rfc8259", "JSON spec (rfc8259, rfc7159, rfc4627, ecma404, skip)")
+	validationFlags.BoolVarP(&validateOnly, "validate", "v", false, "validate only, no output")
+
+	outputFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	outputFlags.BoolVarP(&write, "write", "w", false, "write result back to source file")
+	outputFlags.BoolVar(&color, "color", false, "colorize output (default: auto)")
+	outputFlags.BoolVar(&noColor, "no-color", false, "disable colorized output")
+
+	repairFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	repairFlags.BoolVar(&verbose, "verbose", false, "print repair diagnostics to stderr")
+	repairFlags.BoolVar(&noFix, "no-fix", false, "disable automatic JSON repair")
+
+	ciFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	ciFlags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
+	ciFlags.BoolVarP(&diff, "diff", "d", false, "display diff of changes that would be made")
+	ciFlags.BoolVarP(&quiet, "quiet", "q", false, "suppress non-error output")
+	ciFlags.BoolVarP(&recursive, "recursive", "r", false, "recursively find and process .json files in directories")
+
+	otherFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	otherFlags.BoolVarP(&jsonLines, "jsonlines", "l", false, "process input as newline-delimited JSON (NDJSON)")
+	otherFlags.StringVar(&stdinFilename, "stdin-filename", "", "filename to use in error messages when reading from stdin")
+	otherFlags.StringVar(&configFile, "config", "", "path to config file (default: ~/.config/jfmt/config.toml)")
+	otherFlags.BoolVar(&noConfig, "no-config", false, "ignore config file")
+	otherFlags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
+
+	for _, fs := range []*pflag.FlagSet{formattingFlags, validationFlags, outputFlags, repairFlags, ciFlags, otherFlags} {
+		cmd.Flags().AddFlagSet(fs)
+	}
 
 	//nolint:errcheck
 	cmd.RegisterFlagCompletionFunc("template", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -452,6 +467,43 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	//nolint:errcheck
 	cmd.RegisterFlagCompletionFunc("spec", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"rfc8259", "rfc7159", "rfc4627", "ecma404", "skip"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	type flagGroup struct {
+		title string
+		flags *pflag.FlagSet
+	}
+
+	groups := []flagGroup{
+		{"Formatting", formattingFlags},
+		{"Validation", validationFlags},
+		{"Output", outputFlags},
+		{"Repair", repairFlags},
+		{"CI / Scripting", ciFlags},
+		{"Other", otherFlags},
+	}
+
+	printHelp := func(c *cobra.Command, w io.Writer) {
+		fmt.Fprintf(w, "Usage:\n  %s\n\n%s\n\n", c.UseLine(), c.Short)
+
+		for _, g := range groups {
+			fmt.Fprintf(w, "%s:\n%s\n", g.title, g.flags.FlagUsages())
+		}
+
+		fmt.Fprintf(w, "  -h, --help   help for %s\n", c.Name())
+
+		if c.HasAvailableSubCommands() {
+			fmt.Fprintf(w, "\nUse \"%s [command] --help\" for more information about a command.\n", c.CommandPath())
+		}
+	}
+
+	cmd.SetHelpFunc(func(c *cobra.Command, _ []string) {
+		printHelp(c, c.OutOrStdout())
+	})
+	cmd.SetUsageFunc(func(c *cobra.Command) error {
+		printHelp(c, c.OutOrStderr())
+
+		return nil
 	})
 
 	return cmd
