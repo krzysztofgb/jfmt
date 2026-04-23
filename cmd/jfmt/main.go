@@ -102,7 +102,7 @@ func processInput(src []byte, name string, opts jfmt.Options, validateOnly bool,
 	return 0
 }
 
-func processCheckDiff(src []byte, name string, opts jfmt.Options, verbose bool, check, diff bool, useColor bool, stdout, stderr io.Writer) int {
+func processCheckDiff(src []byte, name string, opts jfmt.Options, verbose bool, check, diff, quiet bool, useColor bool, stdout, stderr io.Writer) int {
 	formatted, err := formatBytes(src, name, opts, verbose, stderr)
 	if err != nil {
 		return 1
@@ -122,7 +122,9 @@ func processCheckDiff(src []byte, name string, opts jfmt.Options, verbose bool, 
 	}
 
 	if check {
-		fmt.Fprintf(stderr, "jfmt: %s: not formatted\n", name)
+		if !quiet {
+			fmt.Fprintf(stderr, "jfmt: %s: not formatted\n", name)
+		}
 
 		return 1
 	}
@@ -248,6 +250,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		showVersion   bool
 		noConfig      bool
 		configFile    string
+		quiet         bool
 		check         bool
 		diff          bool
 		recursive     bool
@@ -369,7 +372,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 				switch {
 				case check || diff:
-					*exitCode = processCheckDiff(src, name, opts, verbose, check, diff, useColor, stdout, stderr)
+					*exitCode = processCheckDiff(src, name, opts, verbose, check, diff, quiet, useColor, stdout, stderr)
 				case jsonLines:
 					*exitCode = processJSONLines(src, name, opts, verbose, useColor, stdout, stderr)
 				default:
@@ -396,7 +399,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 				switch {
 				case check || diff:
-					if processCheckDiff(src, path, opts, verbose, check, diff, useColor, stdout, stderr) != 0 {
+					if processCheckDiff(src, path, opts, verbose, check, diff, quiet, useColor, stdout, stderr) != 0 {
 						code = 1
 					}
 				case write:
@@ -426,6 +429,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 	flags.StringVar(&configFile, "config", "", "path to config file (default: ~/.config/jfmt/config.toml)")
 	flags.StringVar(&stdinFilename, "stdin-filename", "", "filename to use in error messages when reading from stdin")
 	flags.BoolVarP(&recursive, "recursive", "r", false, "recursively find and process .json files in directories")
+	flags.BoolVarP(&quiet, "quiet", "q", false, "suppress non-error output")
 	flags.BoolVar(&check, "check", false, "exit non-zero if any input is not formatted")
 	flags.BoolVarP(&diff, "diff", "d", false, "display diff of changes that would be made")
 	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
