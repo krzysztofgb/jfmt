@@ -34,6 +34,12 @@ homebrew_casks:
     homepage: https://github.com/krzysztofgb/jfmt
     description: A JSON formatter and validator for the command line.
     license: Unlicense
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/jfmt"]
+          end
 
 changelog:
   use: github
