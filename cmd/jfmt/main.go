@@ -179,6 +179,7 @@ func writeInPlace(src []byte, path string, opts jfmt.Options, verbose bool, stde
 func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command {
 	var (
 		showVersion  bool
+		noConfig     bool
 		template     string
 		indent       string
 		compact      bool
@@ -200,6 +201,22 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		SilenceErrors: true,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return []string{"json"}, cobra.ShellCompDirectiveFilterFileExt
+		},
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if noConfig {
+				return nil
+			}
+
+			cfg, err := loadConfig()
+			if err != nil {
+				fmt.Fprintf(stderr, "jfmt: config: %v\n", err)
+
+				return nil
+			}
+
+			applyConfig(cmd, cfg, &template, &indent, &specStr, &compact, &sortKeys, &verbose, &noFix, &color, &noColor, &jsonLines)
+
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
@@ -299,6 +316,7 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 
 	flags := cmd.Flags()
 	flags.BoolVarP(&showVersion, "version", "V", false, "print version and exit")
+	flags.BoolVar(&noConfig, "no-config", false, "ignore config file")
 	flags.StringVarP(&template, "template", "t", "twospace", "indent template (fourspace, threespace, twospace, onetab, compact)")
 	flags.StringVarP(&indent, "indent", "i", "", "custom indent string (overrides --template)")
 	flags.BoolVarP(&compact, "compact", "c", false, "compact output (overrides --template and --indent)")
