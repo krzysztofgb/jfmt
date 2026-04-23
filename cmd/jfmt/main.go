@@ -343,6 +343,10 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 			useColor := !noColor && (color || (outFile != nil && isTerminal(outFile)))
 
 			if len(args) == 0 {
+				if f, ok := cmd.InOrStdin().(*os.File); ok && isTerminal(f) {
+					return cmd.Help()
+				}
+
 				if write {
 					fmt.Fprintln(stderr, "jfmt: --write requires at least one file argument")
 					*exitCode = 1
