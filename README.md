@@ -137,8 +137,8 @@ All keys are optional and correspond to their flag equivalents. CLI flags always
 ```toml
 # ~/.config/jfmt/config.toml
 
-template  = "fourspace"   # fourspace | threespace | twospace | onetab | compact
-spec      = "rfc8259"     # rfc8259 | rfc7159 | rfc4627 | ecma404 | skip
+template  = "fourspace"  # fourspace | threespace | twospace | onetab | compact
+spec      = "rfc8259"  # rfc8259 | rfc7159 | rfc4627 | ecma404 | skip
 sort_keys = false
 no_fix    = false
 color     = false
