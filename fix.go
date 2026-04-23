@@ -160,9 +160,11 @@ func (f *fixer) step() {
 
 	case '"':
 		f.scanDoubleString()
+		f.expectKey = false
 
 	case '\'':
 		f.scanSingleString()
+		f.expectKey = false
 		f.report.SingleQuotes++
 
 	default:
@@ -378,7 +380,7 @@ func (f *fixer) peekSignificant(pos int) byte {
 	for pos < len(f.src) {
 		c := f.src[pos]
 
-		if isSpace(c) {
+		if isSpace(c) || c == ',' {
 			pos++
 
 			continue
