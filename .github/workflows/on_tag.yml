@@ -1,6 +1,5 @@
 permissions:
   contents: write
-
 on:
   push:
     tags:
@@ -10,7 +9,6 @@ on:
       tag:
         description: 'Tag to release (e.g. v0.1.0)'
         required: true
-
 jobs:
   release:
     runs-on: ubuntu-latest
