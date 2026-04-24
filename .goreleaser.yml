@@ -40,7 +40,7 @@ homebrew_casks:
       Shell completions have been installed. If tab completion is not working,
       ensure your shell is configured to load Homebrew completions.
     hooks:
-      post:
+      pre:
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/jfmt"]
