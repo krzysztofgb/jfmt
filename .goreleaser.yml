@@ -2,11 +2,7 @@ version: 2
 
 before:
   hooks:
-    - mkdir -p completions
-    - go run ./cmd/jfmt completion zsh > completions/_jfmt
-    - go run ./cmd/jfmt completion bash > completions/jfmt.bash
-    - go run ./cmd/jfmt completion fish > completions/jfmt.fish
-    - go run ./cmd/jfmt completion powershell > completions/jfmt.ps1
+    - sh -c "mkdir -p completions && go run ./cmd/jfmt completion zsh > completions/_jfmt && go run ./cmd/jfmt completion bash > completions/jfmt.bash && go run ./cmd/jfmt completion fish > completions/jfmt.fish && go run ./cmd/jfmt completion powershell > completions/jfmt.ps1"
 
 builds:
   - main: ./cmd/jfmt
@@ -30,8 +26,7 @@ archives:
         formats:
           - zip
     files:
-      - src: completions/*
-        dst: completions
+      - completions/*
 
 binary_signs:
   - {}
@@ -49,6 +44,12 @@ homebrew_casks:
       zsh: completions/_jfmt
       bash: completions/jfmt.bash
       fish: completions/jfmt.fish
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/jfmt"]
+          end
     caveats: |
       Shell completions have been installed. If tab completion is not working,
       ensure your shell is configured to load Homebrew completions.
