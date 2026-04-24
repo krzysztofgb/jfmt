@@ -1,5 +1,6 @@
 .idea
 bin/
+completions/
 coverage.out
 .playwright-mcp/
 

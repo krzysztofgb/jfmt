@@ -1,5 +1,13 @@
 version: 2
 
+before:
+  hooks:
+    - mkdir -p completions
+    - go run ./cmd/jfmt completion zsh > completions/_jfmt
+    - go run ./cmd/jfmt completion bash > completions/jfmt.bash
+    - go run ./cmd/jfmt completion fish > completions/jfmt.fish
+    - go run ./cmd/jfmt completion powershell > completions/jfmt.ps1
+
 builds:
   - main: ./cmd/jfmt
     env:
@@ -21,6 +29,9 @@ archives:
       - goos: windows
         formats:
           - zip
+    files:
+      - src: completions/*
+        dst: completions
 
 binary_signs:
   - {}
@@ -34,17 +45,13 @@ homebrew_casks:
     homepage: https://github.com/krzysztofgb/jfmt
     description: A JSON formatter and validator for the command line.
     license: Unlicense
-    generate_completions_from_executable:
-      shell_parameter_format: cobra
+    completions:
+      zsh: completions/_jfmt
+      bash: completions/jfmt.bash
+      fish: completions/jfmt.fish
     caveats: |
       Shell completions have been installed. If tab completion is not working,
       ensure your shell is configured to load Homebrew completions.
-    hooks:
-      pre:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/jfmt"]
-          end
 
 changelog:
   use: github
