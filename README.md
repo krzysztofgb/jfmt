@@ -1,7 +1,7 @@
 # jfmt
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/krzysztofgb/jfmt.svg)](https://pkg.go.dev/github.com/krzysztofgb/jfmt)
-[![CI](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml/badge.svg)](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml)
+[![CI](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/krzysztofgb/jfmt)](https://github.com/krzysztofgb/jfmt/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/krzysztofgb/jfmt)](https://goreportcard.com/report/github.com/krzysztofgb/jfmt)
 
