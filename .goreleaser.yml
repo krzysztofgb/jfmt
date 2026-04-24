@@ -34,6 +34,8 @@ homebrew_casks:
     homepage: https://github.com/krzysztofgb/jfmt
     description: A JSON formatter and validator for the command line.
     license: Unlicense
+    generate_completions_from_executable:
+      shell_parameter_format: cobra
     hooks:
       post:
         install: |

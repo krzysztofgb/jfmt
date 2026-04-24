@@ -490,25 +490,33 @@ func buildCmd(exitCode *int, stdout io.Writer, stderr io.Writer) *cobra.Command 
 		{"Other", otherFlags},
 	}
 
-	printHelp := func(c *cobra.Command, w io.Writer) {
-		fmt.Fprintf(w, "Usage:\n  %s\n\n%s\n\n", c.UseLine(), c.Short)
+	printHelp := func(w io.Writer) {
+		fmt.Fprintf(w, "Usage:\n  %s\n\n%s\n\n", cmd.UseLine(), cmd.Short)
 
 		for _, g := range groups {
 			fmt.Fprintf(w, "%s:\n%s\n", g.title, g.flags.FlagUsages())
 		}
 
-		fmt.Fprintf(w, "  -h, --help   help for %s\n", c.Name())
-
-		if c.HasAvailableSubCommands() {
-			fmt.Fprintf(w, "\nUse \"%s [command] --help\" for more information about a command.\n", c.CommandPath())
-		}
+		fmt.Fprintf(w, "  -h, --help   help for %s\n", cmd.Name())
+		fmt.Fprintf(w, "\nRun '%s completion --help' for shell tab-completion setup.\n", cmd.Name())
 	}
 
-	cmd.SetHelpFunc(func(c *cobra.Command, _ []string) {
-		printHelp(c, c.OutOrStdout())
+	defaultHelp := cmd.HelpFunc()
+	defaultUsage := cmd.UsageFunc()
+
+	cmd.SetHelpFunc(func(c *cobra.Command, args []string) {
+		if c != cmd {
+			defaultHelp(c, args)
+
+			return
+		}
+		printHelp(c.OutOrStdout())
 	})
 	cmd.SetUsageFunc(func(c *cobra.Command) error {
-		printHelp(c, c.OutOrStderr())
+		if c != cmd {
+			return defaultUsage(c)
+		}
+		printHelp(c.OutOrStderr())
 
 		return nil
 	})

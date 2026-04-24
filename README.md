@@ -1,7 +1,8 @@
 # jfmt
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/krzysztofgb/jfmt.svg)](https://pkg.go.dev/github.com/krzysztofgb/jfmt)
-[![CI](https://github.com/krzysztofgb/jfmt/actions/workflows/on_push.yml/badge.svg)](https://github.com/krzysztofgb/jfmt/actions/workflows/on_push.yml)
+[![CI](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml/badge.svg)](https://github.com/krzysztofgb/jfmt/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/krzysztofgb/jfmt)](https://github.com/krzysztofgb/jfmt/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/krzysztofgb/jfmt)](https://goreportcard.com/report/github.com/krzysztofgb/jfmt)
 
 A JSON formatter and validator for the command line, also importable as a Go library.
@@ -24,19 +25,33 @@ go install github.com/krzysztofgb/jfmt/cmd/jfmt@latest
 
 ### Shell Completion
 
-After installing, set up tab completion for your shell:
+Homebrew users get tab completion automatically.
 
-```bash
-# Bash
-jfmt completion bash >> ~/.bashrc
+For other installations (pre-built binary, `go install`):
 
-# Zsh
-jfmt completion zsh >> ~/.zshrc
+**Zsh** -- write to your existing fpath (no `.zshrc` changes needed):
+```sh
+jfmt completion zsh > "${fpath[1]}/_jfmt"
+```
+If that requires sudo, use a local directory instead:
+```sh
+mkdir -p ~/.zfunc && jfmt completion zsh > ~/.zfunc/_jfmt
+# add to ~/.zshrc before compinit: fpath=(~/.zfunc $fpath)
+```
 
-# Fish
+**Bash** (requires [bash-completion](https://github.com/scop/bash-completion) v2):
+```sh
+mkdir -p ~/.local/share/bash-completion/completions
+jfmt completion bash > ~/.local/share/bash-completion/completions/jfmt
+```
+
+**Fish:**
+```sh
 jfmt completion fish > ~/.config/fish/completions/jfmt.fish
+```
 
-# PowerShell
+**PowerShell:**
+```sh
 jfmt completion powershell >> $PROFILE
 ```
 
