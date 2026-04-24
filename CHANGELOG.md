@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/krzysztofgb/jfmt/compare/v0.2.2...v0.2.3) (2026-04-24)
+
+
+### Bug Fixes
+
+* **brew:** fix completion file inclusion and restore quarantine hook ([3337f13](https://github.com/krzysztofgb/jfmt/commit/3337f13311ae3a94bde81783bf3944aa46ce81ff))
+
 ## [0.2.2](https://github.com/krzysztofgb/jfmt/compare/v0.2.1...v0.2.2) (2026-04-24)
 
 
