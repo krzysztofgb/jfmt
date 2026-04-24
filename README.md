@@ -137,7 +137,7 @@ jfmt looks for a config file at:
 
 A missing config file is silently ignored. Use `--no-config` to bypass it entirely for scripting.
 
-All keys are optional and correspond to their flag equivalents. CLI flags always take priority over config values.
+All keys are optional and correspond to their flag equivalents. CLI flags always take priority over config values. Run `jfmt --print-config` to inspect the effective configuration in use.
 
 ```toml
 # ~/.config/jfmt/config.toml
