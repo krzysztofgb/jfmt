@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/krzysztofgb/jfmt/compare/v0.2.1...v0.2.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* **brew:** pre-generate completions to avoid executing quarantined binary ([f74c135](https://github.com/krzysztofgb/jfmt/commit/f74c1356852889e502a92c1564e3c6e3a1649226))
+
 ## [0.2.1](https://github.com/krzysztofgb/jfmt/compare/v0.2.0...v0.2.1) (2026-04-24)
 
 
