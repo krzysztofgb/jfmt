@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/krzysztofgb/jfmt/compare/v0.1.0...v0.2.0) (2026-04-24)
+
+
+### Features
+
+* add shell completions support ([560df3d](https://github.com/krzysztofgb/jfmt/commit/560df3da80cca0a1aaab15809f79b6802608c1cf))
+* **brew:** add post-install caveats for shell completions ([2fa073a](https://github.com/krzysztofgb/jfmt/commit/2fa073aa35e50df367898c4012f69bd3e9e40dc5))
+
+
+### Bug Fixes
+
+* scope CI badge to main branch ([6c52123](https://github.com/krzysztofgb/jfmt/commit/6c521231569ec054a3f137b997164386695cc34b))
+
 ## [0.1.0](https://github.com/krzysztofgb/jfmt/compare/v0.0.6...v0.1.0) (2026-04-24)
 
 
