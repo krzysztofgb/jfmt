@@ -62,13 +62,7 @@ func Fix(src []byte) []byte {
 
 // FixWithReport repairs src and returns a report of what was changed.
 func FixWithReport(src []byte) ([]byte, FixReport) {
-	f := &fixer{
-		src:       src,
-		pos:       0,
-		out:       bytes.Buffer{},
-		stack:     nil,
-		expectKey: false,
-	}
+	f := &fixer{src: src}
 
 	return f.run(), f.report
 }
