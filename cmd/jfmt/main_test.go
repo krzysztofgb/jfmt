@@ -996,7 +996,6 @@ func TestRun_completion(t *testing.T) {
 	t.Parallel()
 
 	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
-		shell := shell
 		t.Run(shell, func(t *testing.T) {
 			t.Parallel()
 
