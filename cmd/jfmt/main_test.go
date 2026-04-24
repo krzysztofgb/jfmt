@@ -991,3 +991,24 @@ func TestRun_printConfig_cliFlagOverride(t *testing.T) {
 		t.Errorf("expected compact template from CLI flag, got: %q", out)
 	}
 }
+
+func TestRun_completion(t *testing.T) {
+	t.Parallel()
+
+	for _, shell := range []string{"bash", "zsh", "fish", "powershell"} {
+		shell := shell
+		t.Run(shell, func(t *testing.T) {
+			t.Parallel()
+
+			out, errOut, code := runCmd(t, "", "completion", shell)
+
+			if code != 0 {
+				t.Fatalf("completion %s: exit %d, stderr: %s", shell, code, errOut)
+			}
+
+			if !strings.Contains(out, "jfmt") {
+				t.Errorf("completion %s: expected jfmt in output, got: %q", shell, out[:min(len(out), 200)])
+			}
+		})
+	}
+}
