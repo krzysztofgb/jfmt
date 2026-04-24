@@ -36,6 +36,9 @@ homebrew_casks:
     license: Unlicense
     generate_completions_from_executable:
       shell_parameter_format: cobra
+    caveats: |
+      Shell completions have been installed. If tab completion is not working,
+      ensure your shell is configured to load Homebrew completions.
     hooks:
       post:
         install: |
