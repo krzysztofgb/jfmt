@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/krzysztofgb/jfmt/compare/v0.2.0...v0.2.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* **brew:** remove quarantine before completion generation ([966c680](https://github.com/krzysztofgb/jfmt/commit/966c680aa3ee755a873c82b55feefce6eab4d5a3))
+
 ## [0.2.0](https://github.com/krzysztofgb/jfmt/compare/v0.1.0...v0.2.0) (2026-04-24)
 
 
